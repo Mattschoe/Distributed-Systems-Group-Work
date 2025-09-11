@@ -4,6 +4,11 @@ import (
 	"fmt"
 )
 
+/*
+By making two of the philosophers right handed, the solution prevents deadlocks by being asymmetric.
+Asymmetry prevents a "circular-wait" condition (See https://diningphilosophers.eu/hierarchy_asymmetric/) which is a deadlock condition.
+The solution does however, not take starvation into consideration.
+*/
 func main() {
 	fork1 := make(chan bool, 1)
 	fork2 := make(chan bool, 1)
