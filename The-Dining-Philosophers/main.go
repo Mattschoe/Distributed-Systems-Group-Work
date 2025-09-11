@@ -6,10 +6,11 @@ import (
 )
 
 /*
-By making two of the philosophers right handed, the solution prevents deadlocks by being asymmetric.
+By making every even philosopher right handed, the solution prevents a deadlock by being asymmetric.
 Asymmetry prevents a "circular-wait" condition (See https://diningphilosophers.eu/hierarchy_asymmetric/) which is a deadlock condition.
-The solution does however, not take starvation into consideration.
+The solution does not treat philosophers fairly as the one closing the odd circut is heavily favoured, but there is no full starvation.
 */
+
 func main() {
 	n := 5
 
