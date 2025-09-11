@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 )
 
 /*
@@ -10,23 +11,23 @@ Asymmetry prevents a "circular-wait" condition (See https://diningphilosophers.e
 The solution does however, not take starvation into consideration.
 */
 func main() {
-	fork1 := make(chan bool, 1)
-	fork2 := make(chan bool, 1)
-	fork3 := make(chan bool, 1)
-	fork4 := make(chan bool, 1)
-	fork5 := make(chan bool, 1)
+	n := 5
 
-	go philosopherLeftHanded("Philosopher-1", fork5, fork1)
-	go philosopherRightHanded("Philosopher-2", fork1, fork2)
-	go philosopherLeftHanded("Philosopher-3", fork2, fork3)
-	go philosopherRightHanded("Philosopher-4", fork3, fork4)
-	go philosopherRightHanded("Philosopher-5", fork4, fork5)
+	chans := make([]chan bool, n)
 
-	fork1 <- true
-	fork2 <- true
-	fork3 <- true
-	fork4 <- true
-	fork5 <- true
+	for i := range chans {
+		chans[i] = make(chan bool, 1)
+		chans[i] <- true
+	}
+
+	for i := range chans {
+		if (i+1)%2 == 1 {
+			go philosopherLeftHanded("Philosopher-"+strconv.Itoa(i+1), chans[i], chans[(i+1)%n])
+		} else {
+			go philosopherRightHanded("Philosopher-"+strconv.Itoa(i+1), chans[i], chans[(i+1)%n])
+		}
+	}
+
 	select {}
 }
 
