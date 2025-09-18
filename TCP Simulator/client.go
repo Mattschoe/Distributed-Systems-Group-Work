@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"net"
 )
@@ -13,7 +14,18 @@ func main() {
 	}
 	defer connection.Close() //If shit hits the fan, part 2: Electric bogaloo
 
-	seq := make([]byte, 4)
-	binary.BigEndian.PutUint32(seq, 300)
-	connection.Write([]byte{1, 2, 3, 4, 5})
+	tcpHeader := TCP{
+		SourcePort:        8080,
+		DestinationPort:   8080,
+		Seq:               69,
+		Ack:               0,
+		OffsetAndReserved: 0,
+		Flags:             SYN_FLAG,
+		WindowSize:        1024,
+		Checksum:          0,
+		Urgent:            0,
+	}
+	var tcpBuffer bytes.Buffer
+	binary.Write(&tcpBuffer, binary.BigEndian, tcpHeader)
+	connection.Write(tcpBuffer.Bytes())
 }

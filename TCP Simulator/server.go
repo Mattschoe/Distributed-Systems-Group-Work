@@ -1,13 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"net"
 )
-
-type TCP struct {
-}
 
 func main() {
 	listener, err := net.Listen("tcp", "localhost:6969")
@@ -23,12 +21,21 @@ func main() {
 			panic(err)
 		}
 
-		readBuffer := make([]byte, 4) //Size 4 since that's what TCP uses.
+		bufferSize := 20
+		readBuffer := make([]byte, bufferSize) //Size 20 since that's what TCP uses.
 		bytesReceived, _ := connection.Read(readBuffer)
-		if bytesReceived != 4 {
-			fmt.Println("Expected 4 bytes, received", bytesReceived)
+		if bytesReceived != bufferSize {
+			fmt.Println("Expected", bufferSize, "bytes, received", bytesReceived)
 			continue
 		}
-		fmt.Println(binary.BigEndian.Uint32(readBuffer))
+
+		var tcpHeader TCP
+		buffer := bytes.NewReader(readBuffer[:bytesReceived])
+		readErr := binary.Read(buffer, binary.BigEndian, &tcpHeader)
+		if readErr != nil {
+			panic(readErr)
+		}
+
+		fmt.Println(tcpHeader.Seq)
 	}
 }
