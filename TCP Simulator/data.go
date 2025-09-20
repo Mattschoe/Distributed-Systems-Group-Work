@@ -41,3 +41,13 @@ func (tcp *TCP) toBinary() []byte {
 func (tcp *TCP) hasFlag(flag uint8) bool {
 	return tcp.Flags&flag != 0
 }
+
+func parseTCPSegment(data []byte) (*TCP, error) {
+	var segment TCP
+	buffer := bytes.NewReader(data)
+	err := binary.Read(buffer, binary.BigEndian, &segment)
+	if err != nil {
+		return nil, err
+	}
+	return &segment, nil
+}

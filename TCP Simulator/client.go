@@ -1,8 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -16,71 +15,75 @@ func main() {
 	}
 	defer connection.Close() //If shit hits the fan, part 2: Electric bogaloo
 
-	connectionEstablished, err := establishConnectionToServer(connection)
+	_, err = establishConnectionToServer(connection)
 	if err != nil {
 		panic(err)
-	}
-	if !connectionEstablished {
-		panic("Could not establish connection to server")
 	}
 	fmt.Println("Connection established successfully on Client side")
 }
 
-func establishConnectionToServer(connection net.Conn) (connectionEstablished bool, err error) {
-	tcpHeader := TCP{
-		SourcePort:        6969,
-		DestinationPort:   6969,
-		Seq:               69,
+func establishConnectionToServer(connection net.Conn) (*TCP, error) {
+	tcpHeaderSize := 20
+	clientPort := uint16(6969)
+	initialSeq := uint32(69)
+	windowSize := uint16(1024)
+
+	//Sends initial SYN segment
+	synSeq := TCP{
+		SourcePort:        clientPort,
+		DestinationPort:   clientPort,
+		Seq:               initialSeq,
 		Ack:               0,
 		OffsetAndReserved: 0,
 		Flags:             SYN_FLAG,
-		WindowSize:        1024,
+		WindowSize:        windowSize,
 		Checksum:          0,
 		Urgent:            0,
 	}
-	fmt.Println("- Sending SYN with seq:", tcpHeader.Seq)
-	connection.Write(tcpHeader.toBinary())
-
-	//Waits and Reads for Server ACK-SYN
-	readDeadlineErr := connection.SetReadDeadline(time.Now().Add(2 * time.Second))
-	if readDeadlineErr != nil {
-		return false, readDeadlineErr
-	}
-	bufferSize := 20
-	readBuffer := make([]byte, bufferSize) //Size 20 since that's what TCP uses without options added.
-	fmt.Println("- Waiting for ACK-SYN back")
-	bytesReceived, err := connection.Read(readBuffer)
-	if bytesReceived != bufferSize {
-		return false, fmt.Errorf("Expected to receive %d bytes, received %d", bufferSize, bytesReceived)
-	}
+	fmt.Println("- Sending SYN with seq:", synSeq.Seq)
+	_, err := connection.Write(synSeq.toBinary())
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	//Converts to TCP
-	var segment TCP
-	buffer := bytes.NewReader(readBuffer[:bytesReceived])
-	readErr := binary.Read(buffer, binary.BigEndian, &segment)
-	if readErr != nil {
-		panic(readErr)
+	//Waits for SYN-ACK response from server
+	fmt.Println("- Waiting for SYN-ACK response from server")
+	err = connection.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if err != nil {
+		return nil, err
+	}
+	buffer := make([]byte, tcpHeaderSize)
+	bytesReceived, err := connection.Read(buffer)
+	if err != nil {
+		return nil, err
+	}
+	if bytesReceived != tcpHeaderSize {
+		return nil, fmt.Errorf("expected", tcpHeaderSize, "bytes, received", bytesReceived)
 	}
 
-	if segment.hasFlag(ACK_FLAG) && segment.hasFlag(SYN_FLAG) && segment.Ack == tcpHeader.Seq+1 && segment.Seq != 0 {
-		fmt.Println("- ACK-SYN correctly established, sending ACK back")
-
-		ackTCP := TCP{
-			SourcePort:        segment.SourcePort,
-			DestinationPort:   segment.DestinationPort,
-			Seq:               segment.Seq + 1,
-			Ack:               segment.Ack + 1,
-			OffsetAndReserved: 0,
-			Flags:             ACK_FLAG,
-			WindowSize:        1024,
-			Checksum:          0,
-			Urgent:            0,
-		}
-		connection.Write(ackTCP.toBinary())
-		return true, nil
+	//Parses and validates SYN-ACK segment
+	synAckSeq, err := parseTCPSegment(buffer[:bytesReceived])
+	if err != nil {
+		return nil, err
 	}
-	return false, nil
+	if !synAckSeq.hasFlag(ACK_FLAG) || !synAckSeq.hasFlag(SYN_FLAG) || synAckSeq.Ack != synSeq.Seq+1 || synAckSeq.Seq == 0 {
+		return nil, errors.New("invalid SYN-ACK segment returned from server")
+	}
+	fmt.Println("- SYN-ACK received from server, sending ACK")
+
+	//Sends ACK segment
+	ackSeq := TCP{
+		SourcePort:      synAckSeq.DestinationPort,
+		DestinationPort: synAckSeq.SourcePort,
+		Seq:             synAckSeq.Seq + 1,
+		Ack:             synAckSeq.Ack + 1,
+		Flags:           ACK_FLAG,
+		WindowSize:      windowSize,
+	}
+
+	_, err = connection.Write(ackSeq.toBinary())
+	if err != nil {
+		return nil, fmt.Errorf("error sending ACK to server %d", err)
+	}
+	return synAckSeq, nil
 }
