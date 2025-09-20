@@ -1,5 +1,10 @@
 package main
 
+import (
+	"bytes"
+	"encoding/binary"
+)
+
 type TCP struct {
 	SourcePort        uint16
 	DestinationPort   uint16
@@ -23,3 +28,16 @@ const (
 	ECE_FLAG = 0x40
 	CWR_FLAG = 0x80
 )
+
+func (tcp *TCP) toBinary() []byte {
+	var tcpBuffer bytes.Buffer
+	binary.Write(&tcpBuffer, binary.BigEndian, tcp)
+	return tcpBuffer.Bytes()
+}
+
+/*
+ * Helper function to easily determine if package has a flag or not
+ */
+func (tcp *TCP) hasFlag(flag uint8) bool {
+	return tcp.Flags&flag != 0
+}
