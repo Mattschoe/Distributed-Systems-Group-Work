@@ -1,6 +1,7 @@
 package main
 
 import (
+	tcp "TCP_Simulator/internal"
 	"errors"
 	"fmt"
 	"net"
@@ -22,26 +23,26 @@ func main() {
 	fmt.Println("Connection established successfully on Client side")
 }
 
-func establishConnectionToServer(connection net.Conn) (*TCP, error) {
+func establishConnectionToServer(connection net.Conn) (*tcp.TCP, error) {
 	tcpHeaderSize := 20
 	clientPort := uint16(6969)
 	initialSeq := uint32(69)
 	windowSize := uint16(1024)
 
 	//Sends initial SYN segment
-	synSeq := TCP{
+	synSeq := tcp.TCP{
 		SourcePort:        clientPort,
 		DestinationPort:   clientPort,
 		Seq:               initialSeq,
 		Ack:               0,
 		OffsetAndReserved: 0,
-		Flags:             SYN_FLAG,
+		Flags:             tcp.SYN_FLAG,
 		WindowSize:        windowSize,
 		Checksum:          0,
 		Urgent:            0,
 	}
 	fmt.Println("- Sending SYN with seq:", synSeq.Seq)
-	_, err := connection.Write(synSeq.toBinary())
+	_, err := connection.Write(synSeq.ToBinary())
 	if err != nil {
 		return nil, err
 	}
@@ -62,26 +63,26 @@ func establishConnectionToServer(connection net.Conn) (*TCP, error) {
 	}
 
 	//Parses and validates SYN-ACK segment
-	synAckSeq, err := parseTCPSegment(buffer[:bytesReceived])
+	synAckSeq, err := tcp.ParseTCPSegment(buffer[:bytesReceived])
 	if err != nil {
 		return nil, err
 	}
-	if !synAckSeq.hasFlag(ACK_FLAG) || !synAckSeq.hasFlag(SYN_FLAG) || synAckSeq.Ack != synSeq.Seq+1 || synAckSeq.Seq == 0 {
+	if !synAckSeq.HasFlag(tcp.ACK_FLAG) || !synAckSeq.HasFlag(tcp.SYN_FLAG) || synAckSeq.Ack != synSeq.Seq+1 || synAckSeq.Seq == 0 {
 		return nil, errors.New("invalid SYN-ACK segment returned from server")
 	}
 	fmt.Println("- SYN-ACK received from server, sending ACK")
 
 	//Sends ACK segment
-	ackSeq := TCP{
+	ackSeq := tcp.TCP{
 		SourcePort:      synAckSeq.DestinationPort,
 		DestinationPort: synAckSeq.SourcePort,
 		Seq:             synAckSeq.Seq + 1,
 		Ack:             synAckSeq.Ack + 1,
-		Flags:           ACK_FLAG,
+		Flags:           tcp.ACK_FLAG,
 		WindowSize:      windowSize,
 	}
 
-	_, err = connection.Write(ackSeq.toBinary())
+	_, err = connection.Write(ackSeq.ToBinary())
 	if err != nil {
 		return nil, fmt.Errorf("error sending ACK to server %d", err)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	tcp "TCP_Simulator/internal"
 	"errors"
 	"fmt"
 	"net"
@@ -23,7 +24,7 @@ func main() {
 	fmt.Println("Accepted connection with client", segment)
 }
 
-func AcceptConnection(listener net.PacketConn) (seg *TCP, err error) {
+func AcceptConnection(listener net.PacketConn) (seg *tcp.TCP, err error) {
 	tcpHeaderSize := 20 //20 Since thats the size of the TCPHeader
 	buffer := make([]byte, tcpHeaderSize)
 
@@ -37,22 +38,22 @@ func AcceptConnection(listener net.PacketConn) (seg *TCP, err error) {
 	}
 
 	//parses Clients SYN segment
-	synSegment, err := parseTCPSegment(buffer[:bytesReceived])
+	synSegment, err := tcp.ParseTCPSegment(buffer[:bytesReceived])
 	if err != nil {
 		return nil, err
 	}
-	if !synSegment.hasFlag(SYN_FLAG) {
+	if !synSegment.HasFlag(tcp.SYN_FLAG) {
 		return nil, errors.New("SYN_FLAG not set on initial segment recieved")
 	}
 	fmt.Println("- Received segment with SYN_FLAG, sending acknowledgement..")
 
 	//Sends SYN-ACK response
-	synAckTCP := TCP{
+	synAckTCP := tcp.TCP{
 		Ack:   synSegment.Seq + 1,
 		Seq:   420,
-		Flags: SYN_FLAG | ACK_FLAG,
+		Flags: tcp.SYN_FLAG | tcp.ACK_FLAG,
 	}
-	_, err = listener.WriteTo(synAckTCP.toBinary(), address)
+	_, err = listener.WriteTo(synAckTCP.ToBinary(), address)
 	if err != nil {
 		return nil, err
 	}
@@ -72,12 +73,12 @@ func AcceptConnection(listener net.PacketConn) (seg *TCP, err error) {
 	}
 
 	//Parses Client ACK segment
-	ackSegment, err := parseTCPSegment(buffer[:tcpHeaderSize])
+	ackSegment, err := tcp.ParseTCPSegment(buffer[:tcpHeaderSize])
 	if err != nil {
 		return nil, err
 	}
 
-	if !ackSegment.hasFlag(ACK_FLAG) || ackSegment.hasFlag(SYN_FLAG) || ackSegment.Seq != synAckTCP.Seq+1 || ackSegment.Ack != synAckTCP.Ack+1 {
+	if !ackSegment.HasFlag(tcp.ACK_FLAG) || ackSegment.HasFlag(tcp.SYN_FLAG) || ackSegment.Seq != synAckTCP.Seq+1 || ackSegment.Ack != synAckTCP.Ack+1 {
 		return nil, fmt.Errorf("invalid ACK segment returned from client, 3-way handshake failed")
 	}
 	return &synAckTCP, nil
