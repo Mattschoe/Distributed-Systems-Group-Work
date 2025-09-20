@@ -1,6 +1,7 @@
 package internal
 
-type Request struct {
-	SYN chan struct{}
-	ACK chan struct{}
+type Packet struct {
+	Seq int
+	SYN bool
+	ACK bool
 }

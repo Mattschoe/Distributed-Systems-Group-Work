@@ -7,28 +7,30 @@ import (
 
 func main() {
 	// shared channels
-	req := tcp.Request{
-		SYN: make(chan struct{}),
-		ACK: make(chan struct{}),
-	}
+	socC := make(chan tcp.Packet)
+	socS := make(chan tcp.Packet)
 
-	go server(req) // start server goroutine
-	go client(req) // start client goroutine
+	go server(socS, socC) // start server goroutine
+	go client(socC, socS) // start client goroutine
 
 	select {} // block forever (or use sync.WaitGroup if you want exit)
 }
 
-func server(r tcp.Request) {
+func server(soc chan tcp.Packet, cli chan tcp.Packet) {
 	fmt.Println("Server waiting for SYN...")
-	<-r.SYN // wait for client SYN
-	fmt.Println("Server got SYN, sending ACK")
-	r.ACK <- struct{}{}
+	fmt.Println(<-soc)
+	fmt.Printf("Server got SYN, sending SYN-ACK ")
+	cli <- tcp.Packet{SYN: true, ACK: true}
+	fmt.Println("Server waiting for ACK")
+	fmt.Println(<-soc)
+	fmt.Println("Server got ACK, connection established!")
 }
 
-func client(r tcp.Request) {
+func client(soc chan tcp.Packet, ser chan tcp.Packet) {
 	fmt.Println("Client sending SYN")
-	r.SYN <- struct{}{}
-	fmt.Println("Client waiting for ACK...")
-	<-r.ACK
-	fmt.Println("Client got ACK, connection established!")
+	ser <- tcp.Packet{SYN: true}
+	fmt.Println("Client waiting for SYN-ACK")
+	fmt.Println(<-soc)
+	fmt.Println("Client got SYN-ACK, connection established!")
+	ser <- tcp.Packet{ACK: true}
 }
