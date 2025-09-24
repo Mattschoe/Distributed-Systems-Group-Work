@@ -42,7 +42,7 @@ func readWindow(segment *tcp.TCP, listener net.PacketConn) []uint32 {
 			fmt.Errorf("expected %d bytes but received %d bytes", len(inputBytes), bytesReceived)
 		}
 		inputInt := binary.BigEndian.Uint32(inputBytes)
-		output[i] = inputInt
+		output[inputInt] = inputInt
 	}
 	return output
 }
@@ -54,7 +54,7 @@ func returnACK(output []uint32, listener net.PacketConn, segment *tcp.TCP, addre
 	output[4] = 0 //Force data transfer error to showcase segment request
 	for i := 0; i < int(segment.WindowSize); i++ {
 		if int(output[i]) == i {
-			binary.BigEndian.PutUint32(ack, segment.Seq+uint32(i))
+			binary.BigEndian.PutUint32(ack, segment.Seq+output[i])
 			_, err := listener.WriteTo(ack, address)
 			if err != nil {
 				panic(err)

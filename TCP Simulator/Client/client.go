@@ -33,6 +33,14 @@ func sendWindow(segment *tcp.TCP, connection net.Conn) {
 	input := make([]byte, 32)
 	for i := 0; i < int(segment.WindowSize); i++ {
 		binary.BigEndian.PutUint32(input, uint32(i))
+
+		//Simulates sending in wrong order
+		if i == 4 {
+			binary.BigEndian.PutUint32(input, uint32(i+1))
+		} else if i == 5 {
+			binary.BigEndian.PutUint32(input, uint32(i-1))
+		}
+
 		_, err := connection.Write(input)
 		if err != nil {
 			panic(err)
