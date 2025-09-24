@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 )
 
 /*
@@ -11,49 +10,71 @@ Asymmetry prevents a "circular-wait" condition (See https://diningphilosophers.e
 The solution does not treat philosophers fairly as the one closing the odd circut is heavily favoured, but there is no full starvation.
 */
 
+type request struct {
+	ask  chan struct{} // philosopher sends once to request
+	done chan struct{} // fork replies once to grant; philosopher sends once to release
+}
+
+func fork(id int, reqCh <-chan request) {
+	for req := range reqCh {
+		// Wait for acquire
+		<-req.ask
+		// Grant fork
+		req.done <- struct{}{}
+		// Wait for release
+		<-req.done
+	}
+}
+
+func philosopher(id int, left, right chan request) {
+	var eatCounter = 0
+	// helper: acquire returns a release function that signals on the SAME done chan
+	take := func(ch chan request) func() {
+		ask := make(chan struct{})
+		done := make(chan struct{})
+		ch <- request{ask: ask, done: done}
+		ask <- struct{}{} // request fork
+		<-done            // granted
+		return func() {
+			done <- struct{}{} // release fork
+		}
+	}
+	for {
+		fmt.Printf("Philosopher %d thinking\n", id)
+
+		// Break circular wait:
+		first, second := left, right
+		if id%2 == 0 {
+			first, second = right, left
+		}
+
+		releaseFirst := take(first)
+		releaseSecond := take(second)
+		eatCounter++
+		fmt.Printf("Philosopher %d eating and has eaten %d times\n ", id, eatCounter)
+
+		releaseFirst()
+		releaseSecond()
+	}
+}
+
 func main() {
-	n := 5
 
-	chans := make([]chan bool, n)
+	const n = 3
 
-	for i := range chans {
-		chans[i] = make(chan bool, 1)
-		chans[i] <- true
+	// One goroutine per fork
+	forks := make([]chan request, n)
+	for i := 0; i < n; i++ {
+		forks[i] = make(chan request)
+		go fork(i, forks[i])
 	}
 
-	for i := range chans {
-		if (i+1)%2 == 1 {
-			go philosopherLeftHanded("Philosopher-"+strconv.Itoa(i+1), chans[i], chans[(i+1)%n])
-		} else {
-			go philosopherRightHanded("Philosopher-"+strconv.Itoa(i+1), chans[i], chans[(i+1)%n])
-		}
+	// One goroutine per philosopher
+	for i := 0; i < n; i++ {
+		left := forks[i]
+		right := forks[(i+1)%n]
+		go philosopher(i, left, right)
 	}
-
 	select {}
-}
 
-func philosopherRightHanded(name string, rightFork chan bool, leftFork chan bool) {
-	eatingCounter := 0
-	for {
-		if <-rightFork && <-leftFork {
-			eatingCounter++
-			fmt.Printf("\n%v is eating and has now eaten %d times.\n", name, eatingCounter)
-			rightFork <- true
-			leftFork <- true
-			fmt.Printf("\n%v thinks.\n", name)
-		}
-	}
-}
-
-func philosopherLeftHanded(name string, rightFork chan bool, leftFork chan bool) {
-	eatingCounter := 0
-	for {
-		if <-leftFork && <-rightFork {
-			eatingCounter++
-			fmt.Printf("\n%v is eating and has now eaten %d times.\n", name, eatingCounter)
-			leftFork <- true
-			rightFork <- true
-			fmt.Printf("\n%v thinks.\n", name)
-		}
-	}
 }
