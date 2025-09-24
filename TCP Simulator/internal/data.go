@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ const (
 	CWR_FLAG = 0x80
 )
 
-func (tcp *TCP) toBinary() []byte {
+func (tcp *TCP) ToBinary() []byte {
 	var tcpBuffer bytes.Buffer
 	binary.Write(&tcpBuffer, binary.BigEndian, tcp)
 	return tcpBuffer.Bytes()
@@ -38,11 +38,11 @@ func (tcp *TCP) toBinary() []byte {
 /*
  * Helper function to easily determine if package has a flag or not
  */
-func (tcp *TCP) hasFlag(flag uint8) bool {
+func (tcp *TCP) HasFlag(flag uint8) bool {
 	return tcp.Flags&flag != 0
 }
 
-func parseTCPSegment(data []byte) (*TCP, error) {
+func ParseTCPSegment(data []byte) (*TCP, error) {
 	var segment TCP
 	buffer := bytes.NewReader(data)
 	err := binary.Read(buffer, binary.BigEndian, &segment)
