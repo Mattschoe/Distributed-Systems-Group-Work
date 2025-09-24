@@ -2,6 +2,7 @@ package main
 
 import (
 	tcp "TCP_Simulator/internal"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -16,11 +17,56 @@ func main() {
 	}
 	defer connection.Close() //If shit hits the fan, part 2: Electric bogaloo
 
-	_, err = establishConnectionToServer(connection)
+	segment, err := establishConnectionToServer(connection)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Connection established successfully on Client side")
+	fmt.Println("Accepted connection with client on port", segment.DestinationPort)
+
+	fmt.Println("Sending package...")
+
+	sendWindow(segment, connection)
+	readACK(segment, connection)
+}
+
+func sendWindow(segment *tcp.TCP, connection net.Conn) {
+	input := make([]byte, 32)
+	for i := 0; i < int(segment.WindowSize); i++ {
+		binary.BigEndian.PutUint32(input, uint32(i))
+		_, err := connection.Write(input)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func readACK(segment *tcp.TCP, connection net.Conn) {
+	fmt.Println("Receiving ACK's")
+	output := make([]uint32, int(segment.WindowSize))
+	seq := segment.Seq
+	ackBytes := make([]byte, 32)
+	for i := 0; i < int(segment.WindowSize); i++ {
+		bytesReceived, err := connection.Read(ackBytes)
+		if err != nil {
+			panic(err)
+		}
+		if bytesReceived != len(ackBytes) {
+			fmt.Errorf("expected %d bytes but received %d bytes", len(ackBytes), bytesReceived)
+		}
+		ackInt := binary.BigEndian.Uint32(ackBytes)
+		if ackInt != seq+uint32(i) {
+			fmt.Println("- expected:", seq+uint32(i), "but received", ackInt, "sending original segment...")
+			input := make([]byte, 32)
+			binary.BigEndian.PutUint32(input, seq+uint32(i))
+			connection.Write(input)
+
+			connection.Read(ackBytes)
+			ackInt = binary.BigEndian.Uint32(ackBytes)
+		}
+		fmt.Println("- received ACK for:", ackInt)
+		output[i] = ackInt
+	}
+	fmt.Println("Finished receiving ACK's for segment")
 }
 
 func establishConnectionToServer(connection net.Conn) (*tcp.TCP, error) {
