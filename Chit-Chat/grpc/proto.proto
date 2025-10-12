@@ -1,0 +1,48 @@
+syntax = "proto3";
+option go_package = "/go/chit-chat/grpc/proto";
+
+message TimeOld {
+  int64 time2 = 1;
+  int64 time3 = 2;
+}
+
+message Time {
+  int64 time = 1;
+}
+
+message VectorClocks {
+  map<string, int64> clocks = 1;
+  VectorClocks vector_clocks = 2;
+}
+
+message ChatMessage {
+  enum MessageType {
+    REGULAR = 0;
+    JOIN = 1;
+    LEAVE = 2;
+  }
+  
+  string message = 1;
+  string user = 2;
+  MessageType type = 3;
+  VectorClocks vector_clocks = 4;
+}
+
+message JoinRequest {
+  string user = 1;
+  VectorClocks vector_clocks = 2;
+}
+
+message SendMessageRequest {
+  string user = 1;
+  string message = 2;
+  VectorClocks vector_clocks = 3;
+}
+
+message Empty{}
+
+service ChitChat{
+  rpc getTime (Empty) returns (TimeOld);
+  rpc receiveMessage (JoinRequest) returns (stream ChatMessage);  // Pass user info here
+  rpc sendMessage (SendMessageRequest) returns (Time);
+}
