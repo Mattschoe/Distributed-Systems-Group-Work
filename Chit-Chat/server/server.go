@@ -126,6 +126,7 @@ func (s *grpcServer) start_server() {
 	}
 
 	proto.RegisterChitChatServer(grpcServer, s)
+	log.Print("Server ready to accept connections")
 
 	err = grpcServer.Serve(listener)
 	if err != nil {

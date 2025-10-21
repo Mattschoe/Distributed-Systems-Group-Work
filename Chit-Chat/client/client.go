@@ -5,11 +5,12 @@ import (
 	proto "chit-chat/grpc"
 	"context"
 	"fmt"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"os"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -63,6 +64,10 @@ func main() {
 		scanner.Scan()
 		message := scanner.Text()
 		if message == ".quit" {
+			break
+		}
+		if len(message) > 180 {
+			log.Println("Message too long, keep under 180 characters")
 			break
 		}
 		safeIncrement(vectorClock, username)
