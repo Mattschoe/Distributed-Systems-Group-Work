@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	proto "chit-chat/grpc"
 	"context"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -126,11 +128,27 @@ func (s *grpcServer) start_server() {
 	}
 
 	proto.RegisterChitChatServer(grpcServer, s)
-	log.Print("Server ready to accept connections")
+
+	shutdown := make(chan struct{})
+	go func() {
+		scanner := bufio.NewScanner(os.Stdin)
+		log.Println("Server running. Type '.quit' to stop")
+		for scanner.Scan() {
+			if scanner.Text() == ".quit" {
+				close(shutdown)
+				return
+			}
+		}
+	}()
+
+	go func() {
+		<-shutdown
+		log.Println("Shutting down server")
+		grpcServer.GracefulStop()
+	}()
 
 	err = grpcServer.Serve(listener)
 	if err != nil {
 		log.Fatal("no")
 	}
-
 }
