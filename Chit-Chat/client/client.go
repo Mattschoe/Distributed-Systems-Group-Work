@@ -55,7 +55,7 @@ func main() {
 
 			}
 
-			log.Println(chatMessage.User, ":", chatMessage.Message)
+			log.Println(chatMessage.User, ":", chatMessage.Message, "|", chatMessage.VectorClocks)
 		}
 	}()
 
@@ -78,7 +78,7 @@ func main() {
 		time.Sleep(2 * time.Second)
 	}
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(2 * time.Second)
 }
 func safeIncrement(vc *proto.VectorClocks, user string) {
 	if vc.Clocks == nil {

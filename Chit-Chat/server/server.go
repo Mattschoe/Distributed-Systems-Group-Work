@@ -45,7 +45,7 @@ func (s *grpcServer) addClient(user string, stream proto.ChitChat_ReceiveMessage
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.clients[user] = stream
-	log.Printf("created new client %s", user)
+	log.Printf("SERVER (USER_CREATED): Created new client: %s", user)
 	return nil
 }
 
@@ -53,7 +53,7 @@ func (s *grpcServer) removeClient(user string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	delete(s.clients, user)
-	log.Printf("deleted %s", user)
+	log.Printf("SERVER (USER_REMOVED): Removed: %s", user)
 	return nil
 }
 
@@ -61,21 +61,18 @@ func (s *grpcServer) broadcastMessage(message *proto.ChatMessage) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	if message.VectorClocks != nil && message.VectorClocks.Clocks != nil {
-		for user := range message.VectorClocks.Clocks {
-			log.Printf("-----------")
-			log.Printf("user %s -> %d clockCount", user, message.VectorClocks.Clocks[user])
-			log.Printf("-----------")
-		}
-	}
-
+	log.Printf("SERVER (BROADCASTING_MESSAGE): Broadcasting to users:")
 	for user, stream := range s.clients {
-		if err := stream.Send(message); err != nil {
+		err := stream.Send(message)
+		log.Printf("  - %s, with clockcount: %d", user, message.VectorClocks.Clocks[user])
+
+		if err != nil {
 			go func(user string) {
 				s.removeClient(user)
 			}(user)
 		}
 	}
+	log.Printf("------------")
 }
 
 func (s *grpcServer) SendMessage(ctx context.Context, in *proto.SendMessageRequest) (*proto.Time, error) {
@@ -100,18 +97,18 @@ func (s *grpcServer) broadcastJoinMessage(user string) {
 			Clocks: make(map[string]int64),
 		},
 	}
-
 	s.messageHistory = append(s.messageHistory, message)
-
 	s.broadcastMessage(message)
 }
 
 func (s *grpcServer) broadcastLeaveMessage(user string) {
-
-	s.messageHistory = append(s.messageHistory, &proto.ChatMessage{User: user,
+	message := &proto.ChatMessage{
+		User:    user,
 		Message: "-- left the chat --",
 		Type:    proto.ChatMessage_LEAVE,
-	})
+	}
+	s.messageHistory = append(s.messageHistory, message)
+	s.broadcastMessage(message)
 }
 
 func main() {
@@ -124,7 +121,7 @@ func (s *grpcServer) start_server() {
 	grpcServer := grpc.NewServer()
 	listener, err := net.Listen("tcp", ":8000")
 	if err != nil {
-		log.Fatalf("no")
+		log.Fatalf("SERVER (ERROR): %v", err)
 	}
 
 	proto.RegisterChitChatServer(grpcServer, s)
@@ -132,7 +129,7 @@ func (s *grpcServer) start_server() {
 	shutdown := make(chan struct{})
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
-		log.Println("Server running. Type '.quit' to stop")
+		log.Println("SERVER (STARTUP): Server running. Type '.quit' to stop")
 		for scanner.Scan() {
 			if scanner.Text() == ".quit" {
 				close(shutdown)
@@ -143,12 +140,12 @@ func (s *grpcServer) start_server() {
 
 	go func() {
 		<-shutdown
-		log.Println("Shutting down server")
+		log.Println("SERVER (SHUTDOWN): Shutting down server")
 		grpcServer.GracefulStop()
 	}()
 
 	err = grpcServer.Serve(listener)
 	if err != nil {
-		log.Fatal("no")
+		log.Fatalf("SERVER (ERROR): %v", err)
 	}
 }
