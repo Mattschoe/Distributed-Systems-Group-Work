@@ -30,15 +30,35 @@ func (s *grpcServer) GetTime(ctx context.Context, in *proto.Empty) (*proto.TimeO
 func (s *grpcServer) ReceiveMessage(req *proto.JoinRequest, stream proto.ChitChat_ReceiveMessageServer) error {
 	user := req.User
 
-	s.broadcastJoinMessage(user)
 	s.addClient(user, stream)
+
+	var joinedVC *proto.VectorClocks
+	if req.VectorClocks != nil {
+		joinedVC = req.VectorClocks
+	} else {
+		joinedVC = &proto.VectorClocks{Clocks: make(map[string]int64)}
+	}
+	s.broadcastJoinMessage(user, joinedVC)
 
 	<-stream.Context().Done()
 
 	s.removeClient(user)
-	s.broadcastLeaveMessage(user)
+	s.broadcastLeaveMessage(user, &proto.VectorClocks{Clocks: make(map[string]int64)})
 
 	return nil
+}
+
+func (s *grpcServer) Leave(context context.Context, request *proto.LeaveRequest) (*proto.Empty, error) {
+	user := request.User
+
+	s.removeClient(user)
+	vc := request.VectorClocks
+	if vc == nil {
+		vc = &proto.VectorClocks{Clocks: make(map[string]int64)}
+	}
+
+	s.broadcastLeaveMessage(user, vc)
+	return &proto.Empty{}, nil
 }
 
 func (s *grpcServer) addClient(user string, stream proto.ChitChat_ReceiveMessageServer) error {
@@ -89,25 +109,29 @@ func (s *grpcServer) SendMessage(ctx context.Context, in *proto.SendMessageReque
 	return &proto.Time{Time: time.Now().UnixNano()}, nil
 }
 
-func (s *grpcServer) broadcastJoinMessage(user string) {
-	message := &proto.ChatMessage{User: user,
-		Message: "-- joins the chat --",
-		Type:    proto.ChatMessage_JOIN,
-		VectorClocks: &proto.VectorClocks{
-			Clocks: make(map[string]int64),
-		},
+func (s *grpcServer) broadcastJoinMessage(user string, vc *proto.VectorClocks) {
+	message := &proto.ChatMessage{
+		User:         user,
+		Message:      "-- joins the chat --",
+		Type:         proto.ChatMessage_JOIN,
+		VectorClocks: vc,
 	}
+	s.mutex.Lock()
 	s.messageHistory = append(s.messageHistory, message)
+	s.mutex.Unlock()
 	s.broadcastMessage(message)
 }
 
-func (s *grpcServer) broadcastLeaveMessage(user string) {
+func (s *grpcServer) broadcastLeaveMessage(user string, vc *proto.VectorClocks) {
 	message := &proto.ChatMessage{
-		User:    user,
-		Message: "-- left the chat --",
-		Type:    proto.ChatMessage_LEAVE,
+		User:         user,
+		Message:      "-- left the chat --",
+		Type:         proto.ChatMessage_LEAVE,
+		VectorClocks: vc,
 	}
+	s.mutex.Lock()
 	s.messageHistory = append(s.messageHistory, message)
+	s.mutex.Unlock()
 	s.broadcastMessage(message)
 }
 

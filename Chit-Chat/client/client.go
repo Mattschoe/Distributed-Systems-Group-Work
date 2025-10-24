@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -33,7 +35,8 @@ func main() {
 	fmt.Print("Type your username: ")
 	fmt.Scan(&username)
 
-	stream, err := client.ReceiveMessage(context.Background(), &proto.JoinRequest{User: username})
+	safeIncrement(vectorClock, username)
+	stream, err := client.ReceiveMessage(context.Background(), &proto.JoinRequest{User: username, VectorClocks: vectorClock})
 	if err != nil {
 		log.Fatalf("Failed to join chat: %v", err)
 	}
@@ -47,15 +50,18 @@ func main() {
 			}
 
 			if chatMessage.VectorClocks != nil {
-				safeIncrement(vectorClock, username)
 				for user, theirClocks := range chatMessage.VectorClocks.Clocks {
-					myClock := vectorClock.Clocks[user]
-					vectorClock.Clocks[user] = max(theirClocks, myClock)
+					if vectorClock.Clocks == nil {
+						vectorClock.Clocks = make(map[string]int64)
+					}
+					if theirClocks > vectorClock.Clocks[user] {
+						vectorClock.Clocks[user] = theirClocks
+					}
 				}
-
+				vectorClock.Clocks[username] = vectorClock.Clocks[username] + 1
 			}
 
-			log.Println(chatMessage.User, ":", chatMessage.Message, "|", chatMessage.VectorClocks)
+			log.Println(chatMessage.User, ":", chatMessage.Message, "|", formatClock(chatMessage.VectorClocks))
 		}
 	}()
 
@@ -64,6 +70,7 @@ func main() {
 		scanner.Scan()
 		message := scanner.Text()
 		if message == ".quit" {
+			_, _ = client.Leave(context.Background(), &proto.LeaveRequest{User: username, VectorClocks: vectorClock})
 			break
 		}
 		if len(message) > 180 {
@@ -85,4 +92,16 @@ func safeIncrement(vc *proto.VectorClocks, user string) {
 		vc.Clocks = make(map[string]int64)
 	}
 	vc.Clocks[user]++
+}
+func formatClock(vc *proto.VectorClocks) string {
+	if vc == nil || len(vc.Clocks) == 0 {
+		return "[]"
+	}
+	parts := make([]string, 0, len(vc.Clocks))
+	for k, v := range vc.Clocks {
+		parts = append(parts, fmt.Sprintf("%s:%d", k, v))
+	}
+	sort.Strings(parts)
+	return "[" + strings.Join(parts, ", ") + "]"
+
 }

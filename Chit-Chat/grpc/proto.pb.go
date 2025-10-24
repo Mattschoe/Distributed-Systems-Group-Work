@@ -338,6 +338,58 @@ func (x *JoinRequest) GetVectorClocks() *VectorClocks {
 	return nil
 }
 
+type LeaveRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          string                 `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	VectorClocks  *VectorClocks          `protobuf:"bytes,2,opt,name=vector_clocks,json=vectorClocks,proto3" json:"vector_clocks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LeaveRequest) Reset() {
+	*x = LeaveRequest{}
+	mi := &file_grpc_proto_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LeaveRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LeaveRequest) ProtoMessage() {}
+
+func (x *LeaveRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_grpc_proto_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LeaveRequest.ProtoReflect.Descriptor instead.
+func (*LeaveRequest) Descriptor() ([]byte, []int) {
+	return file_grpc_proto_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *LeaveRequest) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
+}
+
+func (x *LeaveRequest) GetVectorClocks() *VectorClocks {
+	if x != nil {
+		return x.VectorClocks
+	}
+	return nil
+}
+
 type SendMessageRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	User          string                 `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
@@ -349,7 +401,7 @@ type SendMessageRequest struct {
 
 func (x *SendMessageRequest) Reset() {
 	*x = SendMessageRequest{}
-	mi := &file_grpc_proto_proto_msgTypes[5]
+	mi := &file_grpc_proto_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -361,7 +413,7 @@ func (x *SendMessageRequest) String() string {
 func (*SendMessageRequest) ProtoMessage() {}
 
 func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_grpc_proto_proto_msgTypes[5]
+	mi := &file_grpc_proto_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -374,7 +426,7 @@ func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageRequest.ProtoReflect.Descriptor instead.
 func (*SendMessageRequest) Descriptor() ([]byte, []int) {
-	return file_grpc_proto_proto_rawDescGZIP(), []int{5}
+	return file_grpc_proto_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SendMessageRequest) GetUser() string {
@@ -406,7 +458,7 @@ type Empty struct {
 
 func (x *Empty) Reset() {
 	*x = Empty{}
-	mi := &file_grpc_proto_proto_msgTypes[6]
+	mi := &file_grpc_proto_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -418,7 +470,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_grpc_proto_proto_msgTypes[6]
+	mi := &file_grpc_proto_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -431,7 +483,7 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_grpc_proto_proto_rawDescGZIP(), []int{6}
+	return file_grpc_proto_proto_rawDescGZIP(), []int{7}
 }
 
 var File_grpc_proto_proto protoreflect.FileDescriptor
@@ -461,16 +513,20 @@ const file_grpc_proto_proto_rawDesc = "" +
 	"\x05LEAVE\x10\x02\"U\n" +
 	"\vJoinRequest\x12\x12\n" +
 	"\x04user\x18\x01 \x01(\tR\x04user\x122\n" +
+	"\rvector_clocks\x18\x02 \x01(\v2\r.VectorClocksR\fvectorClocks\"V\n" +
+	"\fLeaveRequest\x12\x12\n" +
+	"\x04user\x18\x01 \x01(\tR\x04user\x122\n" +
 	"\rvector_clocks\x18\x02 \x01(\v2\r.VectorClocksR\fvectorClocks\"v\n" +
 	"\x12SendMessageRequest\x12\x12\n" +
 	"\x04user\x18\x01 \x01(\tR\x04user\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
 	"\rvector_clocks\x18\x03 \x01(\v2\r.VectorClocksR\fvectorClocks\"\a\n" +
-	"\x05Empty2\x82\x01\n" +
+	"\x05Empty2\xa2\x01\n" +
 	"\bChitChat\x12\x1b\n" +
 	"\agetTime\x12\x06.Empty\x1a\b.TimeOld\x12.\n" +
 	"\x0ereceiveMessage\x12\f.JoinRequest\x1a\f.ChatMessage0\x01\x12)\n" +
-	"\vsendMessage\x12\x13.SendMessageRequest\x1a\x05.TimeB\x1aZ\x18/go/chit-chat/grpc/protob\x06proto3"
+	"\vsendMessage\x12\x13.SendMessageRequest\x1a\x05.Time\x12\x1e\n" +
+	"\x05Leave\x12\r.LeaveRequest\x1a\x06.EmptyB\x1aZ\x18/go/chit-chat/grpc/protob\x06proto3"
 
 var (
 	file_grpc_proto_proto_rawDescOnce sync.Once
@@ -485,7 +541,7 @@ func file_grpc_proto_proto_rawDescGZIP() []byte {
 }
 
 var file_grpc_proto_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_grpc_proto_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_grpc_proto_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_grpc_proto_proto_goTypes = []any{
 	(ChatMessage_MessageType)(0), // 0: ChatMessage.MessageType
 	(*TimeOld)(nil),              // 1: TimeOld
@@ -493,28 +549,32 @@ var file_grpc_proto_proto_goTypes = []any{
 	(*VectorClocks)(nil),         // 3: VectorClocks
 	(*ChatMessage)(nil),          // 4: ChatMessage
 	(*JoinRequest)(nil),          // 5: JoinRequest
-	(*SendMessageRequest)(nil),   // 6: SendMessageRequest
-	(*Empty)(nil),                // 7: Empty
-	nil,                          // 8: VectorClocks.ClocksEntry
+	(*LeaveRequest)(nil),         // 6: LeaveRequest
+	(*SendMessageRequest)(nil),   // 7: SendMessageRequest
+	(*Empty)(nil),                // 8: Empty
+	nil,                          // 9: VectorClocks.ClocksEntry
 }
 var file_grpc_proto_proto_depIdxs = []int32{
-	8, // 0: VectorClocks.clocks:type_name -> VectorClocks.ClocksEntry
-	3, // 1: VectorClocks.vector_clocks:type_name -> VectorClocks
-	0, // 2: ChatMessage.type:type_name -> ChatMessage.MessageType
-	3, // 3: ChatMessage.vector_clocks:type_name -> VectorClocks
-	3, // 4: JoinRequest.vector_clocks:type_name -> VectorClocks
-	3, // 5: SendMessageRequest.vector_clocks:type_name -> VectorClocks
-	7, // 6: ChitChat.getTime:input_type -> Empty
-	5, // 7: ChitChat.receiveMessage:input_type -> JoinRequest
-	6, // 8: ChitChat.sendMessage:input_type -> SendMessageRequest
-	1, // 9: ChitChat.getTime:output_type -> TimeOld
-	4, // 10: ChitChat.receiveMessage:output_type -> ChatMessage
-	2, // 11: ChitChat.sendMessage:output_type -> Time
-	9, // [9:12] is the sub-list for method output_type
-	6, // [6:9] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	9,  // 0: VectorClocks.clocks:type_name -> VectorClocks.ClocksEntry
+	3,  // 1: VectorClocks.vector_clocks:type_name -> VectorClocks
+	0,  // 2: ChatMessage.type:type_name -> ChatMessage.MessageType
+	3,  // 3: ChatMessage.vector_clocks:type_name -> VectorClocks
+	3,  // 4: JoinRequest.vector_clocks:type_name -> VectorClocks
+	3,  // 5: LeaveRequest.vector_clocks:type_name -> VectorClocks
+	3,  // 6: SendMessageRequest.vector_clocks:type_name -> VectorClocks
+	8,  // 7: ChitChat.getTime:input_type -> Empty
+	5,  // 8: ChitChat.receiveMessage:input_type -> JoinRequest
+	7,  // 9: ChitChat.sendMessage:input_type -> SendMessageRequest
+	6,  // 10: ChitChat.Leave:input_type -> LeaveRequest
+	1,  // 11: ChitChat.getTime:output_type -> TimeOld
+	4,  // 12: ChitChat.receiveMessage:output_type -> ChatMessage
+	2,  // 13: ChitChat.sendMessage:output_type -> Time
+	8,  // 14: ChitChat.Leave:output_type -> Empty
+	11, // [11:15] is the sub-list for method output_type
+	7,  // [7:11] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_grpc_proto_proto_init() }
@@ -528,7 +588,7 @@ func file_grpc_proto_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_grpc_proto_proto_rawDesc), len(file_grpc_proto_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
