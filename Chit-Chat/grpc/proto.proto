@@ -41,7 +41,6 @@ message SendMessageRequest {
 message Empty{}
 
 service ChitChat{
-  rpc getTime (Empty) returns (TimeOld);
   rpc receiveMessage (JoinRequest) returns (stream ChatMessage);
   rpc sendMessage (SendMessageRequest) returns (Time);
   rpc Leave (LeaveRequest) returns (Empty);

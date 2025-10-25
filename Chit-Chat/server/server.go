@@ -20,13 +20,6 @@ type grpcServer struct {
 	messageHistory []*proto.ChatMessage
 }
 
-func (s *grpcServer) GetTime(ctx context.Context, in *proto.Empty) (*proto.TimeOld, error) {
-	time2 := time.Now().UnixNano()
-	time.Sleep(100 * time.Millisecond)
-	time3 := time.Now().UnixNano()
-	return &proto.TimeOld{Time2: time2, Time3: time3}, nil
-}
-
 func (s *grpcServer) ReceiveMessage(req *proto.JoinRequest, stream proto.ChitChat_ReceiveMessageServer) error {
 	user := req.User
 
@@ -79,18 +72,32 @@ func (s *grpcServer) removeClient(user string) error {
 
 func (s *grpcServer) broadcastMessage(message *proto.ChatMessage) {
 	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+
+	//Avoids deadlock be using a copy of the client
+	clientsCopy := make(map[string]proto.ChitChat_ReceiveMessageServer, len(s.clients))
+	for user, stream := range s.clients {
+		clientsCopy[user] = stream
+	}
+	s.mutex.RUnlock()
 
 	log.Printf("SERVER (BROADCASTING_MESSAGE): Broadcasting to users:")
-	for user, stream := range s.clients {
+	var failedUsers []string
+	for user, stream := range clientsCopy {
 		err := stream.Send(message)
-		log.Printf("  - %s, with clockcount: %d", user, message.VectorClocks.Clocks[user])
+		if message.VectorClocks != nil && message.VectorClocks.Clocks != nil {
+			log.Printf("  - %s, with clockcount: %d", user, message.VectorClocks.Clocks[user])
+		} else {
+			log.Printf(" - %s", user)
+		}
 
 		if err != nil {
-			go func(user string) {
-				s.removeClient(user)
-			}(user)
+			failedUsers = append(failedUsers, user)
 		}
+	}
+
+	//Removes failed users because they have a bad pc and suck
+	for _, user := range failedUsers {
+		s.removeClient(user)
 	}
 	log.Printf("------------")
 }
@@ -101,11 +108,10 @@ func (s *grpcServer) SendMessage(ctx context.Context, in *proto.SendMessageReque
 		Type:         proto.ChatMessage_REGULAR,
 		VectorClocks: in.VectorClocks,
 	}
-
+	s.mutex.Lock()
 	s.messageHistory = append(s.messageHistory, message)
-
+	s.mutex.Unlock()
 	s.broadcastMessage(message)
-
 	return &proto.Time{Time: time.Now().UnixNano()}, nil
 }
 

@@ -19,7 +19,6 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChitChat_GetTime_FullMethodName        = "/ChitChat/getTime"
 	ChitChat_ReceiveMessage_FullMethodName = "/ChitChat/receiveMessage"
 	ChitChat_SendMessage_FullMethodName    = "/ChitChat/sendMessage"
 	ChitChat_Leave_FullMethodName          = "/ChitChat/Leave"
@@ -29,7 +28,6 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChitChatClient interface {
-	GetTime(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TimeOld, error)
 	ReceiveMessage(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatMessage], error)
 	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*Time, error)
 	Leave(ctx context.Context, in *LeaveRequest, opts ...grpc.CallOption) (*Empty, error)
@@ -41,16 +39,6 @@ type chitChatClient struct {
 
 func NewChitChatClient(cc grpc.ClientConnInterface) ChitChatClient {
 	return &chitChatClient{cc}
-}
-
-func (c *chitChatClient) GetTime(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TimeOld, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TimeOld)
-	err := c.cc.Invoke(ctx, ChitChat_GetTime_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *chitChatClient) ReceiveMessage(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatMessage], error) {
@@ -96,7 +84,6 @@ func (c *chitChatClient) Leave(ctx context.Context, in *LeaveRequest, opts ...gr
 // All implementations must embed UnimplementedChitChatServer
 // for forward compatibility.
 type ChitChatServer interface {
-	GetTime(context.Context, *Empty) (*TimeOld, error)
 	ReceiveMessage(*JoinRequest, grpc.ServerStreamingServer[ChatMessage]) error
 	SendMessage(context.Context, *SendMessageRequest) (*Time, error)
 	Leave(context.Context, *LeaveRequest) (*Empty, error)
@@ -110,9 +97,6 @@ type ChitChatServer interface {
 // pointer dereference when methods are called.
 type UnimplementedChitChatServer struct{}
 
-func (UnimplementedChitChatServer) GetTime(context.Context, *Empty) (*TimeOld, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTime not implemented")
-}
 func (UnimplementedChitChatServer) ReceiveMessage(*JoinRequest, grpc.ServerStreamingServer[ChatMessage]) error {
 	return status.Errorf(codes.Unimplemented, "method ReceiveMessage not implemented")
 }
@@ -141,24 +125,6 @@ func RegisterChitChatServer(s grpc.ServiceRegistrar, srv ChitChatServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ChitChat_ServiceDesc, srv)
-}
-
-func _ChitChat_GetTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChitChatServer).GetTime(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ChitChat_GetTime_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChitChatServer).GetTime(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _ChitChat_ReceiveMessage_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -215,10 +181,6 @@ var ChitChat_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "ChitChat",
 	HandlerType: (*ChitChatServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "getTime",
-			Handler:    _ChitChat_GetTime_Handler,
-		},
 		{
 			MethodName: "sendMessage",
 			Handler:    _ChitChat_SendMessage_Handler,
