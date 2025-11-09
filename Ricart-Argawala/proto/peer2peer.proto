@@ -1,0 +1,19 @@
+syntax="proto3";
+
+package peer2peer;
+
+option go_package = "ricart-argawala/proto";
+
+service Peer2Peer{
+  rpc SendMessage(MessageRequest) returns (MessageResponce){}
+}
+
+message MessageRequest{
+  string content = 1;
+  int64 LamportClock = 2;
+}
+
+message MessageResponce{
+  string content = 1;
+  int64 LamportClock = 2;
+}
