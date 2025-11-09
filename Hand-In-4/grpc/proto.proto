@@ -1,0 +1,3 @@
+syntax = "proto3";
+option go_package= "go/Hand-In-4/grpc/proto";
+

@@ -32,3 +32,5 @@ go.work.sum
 # .vscode/
 /The-Dining-Philosophers/.idea
 /Chit-Chat/.idea
+/Hand-In-4/.idea
+Hand-In-4/client/LiveProcesses.txt
