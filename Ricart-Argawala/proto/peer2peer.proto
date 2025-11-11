@@ -6,14 +6,26 @@ option go_package = "ricart-argawala/proto";
 
 service Peer2Peer{
   rpc SendMessage(MessageRequest) returns (MessageResponce){}
+  rpc RequestCriticalSection(CriticalSectionRequest) returns (CriticalSectionResponce){}
 }
 
 message MessageRequest{
   string content = 1;
   int64 LamportClock = 2;
+  repeated string KnownAddresses = 3;
 }
 
 message MessageResponce{
   string content = 1;
   int64 LamportClock = 2;
+  repeated string KnownAddresses = 3;
+}
+
+message CriticalSectionRequest{
+  int64 LamportClock = 1;
+  string RequesterAddress = 2;
+}
+
+message CriticalSectionResponce{
+  int64 LamportClock = 1;
 }

@@ -22,11 +22,12 @@ const (
 )
 
 type MessageRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Content       string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
-	LamportClock  int64                  `protobuf:"varint,2,opt,name=LamportClock,proto3" json:"LamportClock,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Content        string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
+	LamportClock   int64                  `protobuf:"varint,2,opt,name=LamportClock,proto3" json:"LamportClock,omitempty"`
+	KnownAddresses []string               `protobuf:"bytes,3,rep,name=KnownAddresses,proto3" json:"KnownAddresses,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MessageRequest) Reset() {
@@ -73,12 +74,20 @@ func (x *MessageRequest) GetLamportClock() int64 {
 	return 0
 }
 
+func (x *MessageRequest) GetKnownAddresses() []string {
+	if x != nil {
+		return x.KnownAddresses
+	}
+	return nil
+}
+
 type MessageResponce struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Content       string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
-	LamportClock  int64                  `protobuf:"varint,2,opt,name=LamportClock,proto3" json:"LamportClock,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Content        string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
+	LamportClock   int64                  `protobuf:"varint,2,opt,name=LamportClock,proto3" json:"LamportClock,omitempty"`
+	KnownAddresses []string               `protobuf:"bytes,3,rep,name=KnownAddresses,proto3" json:"KnownAddresses,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MessageResponce) Reset() {
@@ -125,19 +134,130 @@ func (x *MessageResponce) GetLamportClock() int64 {
 	return 0
 }
 
+func (x *MessageResponce) GetKnownAddresses() []string {
+	if x != nil {
+		return x.KnownAddresses
+	}
+	return nil
+}
+
+type CriticalSectionRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	LamportClock     int64                  `protobuf:"varint,1,opt,name=LamportClock,proto3" json:"LamportClock,omitempty"`
+	RequesterAddress string                 `protobuf:"bytes,2,opt,name=RequesterAddress,proto3" json:"RequesterAddress,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CriticalSectionRequest) Reset() {
+	*x = CriticalSectionRequest{}
+	mi := &file_proto_peer2peer_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CriticalSectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CriticalSectionRequest) ProtoMessage() {}
+
+func (x *CriticalSectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_peer2peer_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CriticalSectionRequest.ProtoReflect.Descriptor instead.
+func (*CriticalSectionRequest) Descriptor() ([]byte, []int) {
+	return file_proto_peer2peer_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CriticalSectionRequest) GetLamportClock() int64 {
+	if x != nil {
+		return x.LamportClock
+	}
+	return 0
+}
+
+func (x *CriticalSectionRequest) GetRequesterAddress() string {
+	if x != nil {
+		return x.RequesterAddress
+	}
+	return ""
+}
+
+type CriticalSectionResponce struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LamportClock  int64                  `protobuf:"varint,1,opt,name=LamportClock,proto3" json:"LamportClock,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CriticalSectionResponce) Reset() {
+	*x = CriticalSectionResponce{}
+	mi := &file_proto_peer2peer_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CriticalSectionResponce) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CriticalSectionResponce) ProtoMessage() {}
+
+func (x *CriticalSectionResponce) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_peer2peer_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CriticalSectionResponce.ProtoReflect.Descriptor instead.
+func (*CriticalSectionResponce) Descriptor() ([]byte, []int) {
+	return file_proto_peer2peer_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CriticalSectionResponce) GetLamportClock() int64 {
+	if x != nil {
+		return x.LamportClock
+	}
+	return 0
+}
+
 var File_proto_peer2peer_proto protoreflect.FileDescriptor
 
 const file_proto_peer2peer_proto_rawDesc = "" +
 	"\n" +
-	"\x15proto/peer2peer.proto\x12\tpeer2peer\"N\n" +
+	"\x15proto/peer2peer.proto\x12\tpeer2peer\"v\n" +
 	"\x0eMessageRequest\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\"\n" +
-	"\fLamportClock\x18\x02 \x01(\x03R\fLamportClock\"O\n" +
+	"\fLamportClock\x18\x02 \x01(\x03R\fLamportClock\x12&\n" +
+	"\x0eKnownAddresses\x18\x03 \x03(\tR\x0eKnownAddresses\"w\n" +
 	"\x0fMessageResponce\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\"\n" +
-	"\fLamportClock\x18\x02 \x01(\x03R\fLamportClock2S\n" +
+	"\fLamportClock\x18\x02 \x01(\x03R\fLamportClock\x12&\n" +
+	"\x0eKnownAddresses\x18\x03 \x03(\tR\x0eKnownAddresses\"h\n" +
+	"\x16CriticalSectionRequest\x12\"\n" +
+	"\fLamportClock\x18\x01 \x01(\x03R\fLamportClock\x12*\n" +
+	"\x10RequesterAddress\x18\x02 \x01(\tR\x10RequesterAddress\"=\n" +
+	"\x17CriticalSectionResponce\x12\"\n" +
+	"\fLamportClock\x18\x01 \x01(\x03R\fLamportClock2\xb6\x01\n" +
 	"\tPeer2Peer\x12F\n" +
-	"\vSendMessage\x12\x19.peer2peer.MessageRequest\x1a\x1a.peer2peer.MessageResponce\"\x00B\x17Z\x15ricart-argawala/protob\x06proto3"
+	"\vSendMessage\x12\x19.peer2peer.MessageRequest\x1a\x1a.peer2peer.MessageResponce\"\x00\x12a\n" +
+	"\x16RequestCriticalSection\x12!.peer2peer.CriticalSectionRequest\x1a\".peer2peer.CriticalSectionResponce\"\x00B\x17Z\x15ricart-argawala/protob\x06proto3"
 
 var (
 	file_proto_peer2peer_proto_rawDescOnce sync.Once
@@ -151,16 +271,20 @@ func file_proto_peer2peer_proto_rawDescGZIP() []byte {
 	return file_proto_peer2peer_proto_rawDescData
 }
 
-var file_proto_peer2peer_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_peer2peer_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_proto_peer2peer_proto_goTypes = []any{
-	(*MessageRequest)(nil),  // 0: peer2peer.MessageRequest
-	(*MessageResponce)(nil), // 1: peer2peer.MessageResponce
+	(*MessageRequest)(nil),          // 0: peer2peer.MessageRequest
+	(*MessageResponce)(nil),         // 1: peer2peer.MessageResponce
+	(*CriticalSectionRequest)(nil),  // 2: peer2peer.CriticalSectionRequest
+	(*CriticalSectionResponce)(nil), // 3: peer2peer.CriticalSectionResponce
 }
 var file_proto_peer2peer_proto_depIdxs = []int32{
 	0, // 0: peer2peer.Peer2Peer.SendMessage:input_type -> peer2peer.MessageRequest
-	1, // 1: peer2peer.Peer2Peer.SendMessage:output_type -> peer2peer.MessageResponce
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: peer2peer.Peer2Peer.RequestCriticalSection:input_type -> peer2peer.CriticalSectionRequest
+	1, // 2: peer2peer.Peer2Peer.SendMessage:output_type -> peer2peer.MessageResponce
+	3, // 3: peer2peer.Peer2Peer.RequestCriticalSection:output_type -> peer2peer.CriticalSectionResponce
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -177,7 +301,7 @@ func file_proto_peer2peer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_peer2peer_proto_rawDesc), len(file_proto_peer2peer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
