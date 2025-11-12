@@ -7,6 +7,7 @@ import (
 	"log"
 	pb "ricart-argawala/proto"
 	"strconv"
+	"sync"
 
 	"net"
 	"os"
@@ -18,9 +19,11 @@ import (
 var lamportClock int64
 var peerAddresses []string
 var myRequestClock int64
+var deferredReplies []string
 var myAddress string
 var repliesReceived int
 var deferredChannels map[string]chan bool
+var replyMutex sync.Mutex
 
 type peer struct {
 	pb.UnimplementedPeer2PeerServer
@@ -73,7 +76,7 @@ func (p *peer) RequestCriticalSection(ctx context.Context, request *pb.CriticalS
 
 func requestCriticalSection() {
 	if len(peerAddresses) == 0 {
-		log.Printf("No peers, entering CRITICAL SECTION immediately")
+		log.Printf("No peers, entering CS immediately")
 		log.Printf("*** ENTERED CRITICAL SECTION ***")
 		return
 	}
@@ -81,38 +84,58 @@ func requestCriticalSection() {
 	lamportClock += 1
 	myRequestClock = lamportClock
 	repliesReceived = 0
-	log.Printf("Requesting critical section from %d peers with clock %d", len(peerAddresses), myRequestClock)
 
-	for _, peerAddress := range peerAddresses {
-		log.Println("connecting to " + peerAddress)
-		conn, err := grpc.NewClient(peerAddress, grpc.WithInsecure(), grpc.WithBlock())
-		if err != nil {
-			log.Fatalf("failed to connect to %s: %v", peerAddress, err)
-		}
+	currentPeers := make([]string, len(peerAddresses))
+	copy(currentPeers, peerAddresses)
+	expectedReplies := len(currentPeers)
 
-		client := pb.NewPeer2PeerClient(conn)
+	log.Printf("Requesting critical section from %d peers with clock %d", expectedReplies, myRequestClock)
 
-		log.Printf("sending CRITICAL SECTION request to %s, lamport clock: %d", peerAddress, myRequestClock)
+	for _, peerAddress := range currentPeers {
+		go func(addr string) {
+			conn, err := grpc.NewClient(addr, grpc.WithInsecure(), grpc.WithBlock())
+			if err != nil {
+				log.Printf("failed to connect to %s: %v", addr, err)
+				return
+			}
+			defer conn.Close()
 
-		response, err := client.RequestCriticalSection(context.Background(), &pb.CriticalSectionRequest{
-			LamportClock:     myRequestClock,
-			RequesterAddress: myAddress})
+			client := pb.NewPeer2PeerClient(conn)
 
-		if err != nil {
-			log.Fatalf("failed to send CRITICAL SECTION request: %v", err)
-		}
+			log.Printf("sending CS request to %s, lamport clock: %d", addr, myRequestClock)
 
-		conn.Close()
+			response, err := client.RequestCriticalSection(context.Background(), &pb.CriticalSectionRequest{
+				LamportClock:     myRequestClock,
+				RequesterAddress: myAddress})
 
-		if response.GetLamportClock() > lamportClock {
-			lamportClock = response.GetLamportClock()
-		}
-		lamportClock += 1
-		repliesReceived++
-		log.Printf("received reply %d/%d, lamport clock: %d", repliesReceived, len(peerAddresses), lamportClock)
+			if err != nil {
+				log.Printf("failed to send CS request to %s: %v", addr, err)
+				return
+			}
+
+			replyMutex.Lock()
+			if response.GetLamportClock() > lamportClock {
+				lamportClock = response.GetLamportClock()
+			}
+			lamportClock += 1
+			repliesReceived++
+			log.Printf("received reply %d/%d from %s, lamport clock: %d", repliesReceived, expectedReplies, addr, lamportClock)
+			replyMutex.Unlock()
+		}(peerAddress)
 	}
 
-	log.Printf("*** ENTERED CRITICAL SECTION *** (received all %d replies)", repliesReceived)
+	for {
+		replyMutex.Lock()
+		count := repliesReceived
+		replyMutex.Unlock()
+
+		if count >= expectedReplies {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	log.Printf("*** ENTERED CRITICAL SECTION *** (received all %d/%d replies)", repliesReceived, expectedReplies)
 
 	time.Sleep(10 * time.Second)
 
@@ -258,11 +281,14 @@ func main() {
 	for len(peerAddresses) < 2 {
 	}
 
-	fmt.Println("you have 10 seconds to add more peers")
+	fmt.Println("you have 1 seconds to add more peers")
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(1 * time.Second)
 
-	requestCriticalSection()
-
-	select {}
+	for {
+		requestCriticalSection()
+		
+		log.Printf("Waiting 3 seconds before next CS request...")
+		time.Sleep(3 * time.Second)
+	}
 }
