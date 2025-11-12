@@ -18,33 +18,12 @@ import (
 var lamportClock int64
 var peerAddresses []string
 var myRequestClock int64
-var deferredReplies []string
 var myAddress string
 var repliesReceived int
+var deferredChannels map[string]chan bool
 
 type peer struct {
 	pb.UnimplementedPeer2PeerServer
-}
-
-func enqueue(queue []string, element string) []string {
-	queue = append(queue, element)
-	return queue
-}
-
-func dequeue(queue []string) (string, []string) {
-	element := queue[0]
-	if len(queue) == 1 {
-		var tmp = []string{}
-		return element, tmp
-	}
-	return element, queue[1:]
-}
-
-func peek(queue []string) string {
-	if len(queue) == 0 {
-		return ""
-	}
-	return queue[0]
 }
 
 func (p *peer) SendMessage(ctx context.Context, request *pb.MessageRequest) (*pb.MessageResponce, error) {
@@ -80,42 +59,21 @@ func (p *peer) RequestCriticalSection(ctx context.Context, request *pb.CriticalS
 	} else {
 		log.Printf("Deferring reply to %s (our request: %d, their request: %d)",
 			request.GetRequesterAddress(), myRequestClock, request.LamportClock)
-		deferredReplies = append(deferredReplies, request.GetRequesterAddress())
+
+		ch := make(chan bool)
+		deferredChannels[request.GetRequesterAddress()] = ch
+
+		<-ch
 
 		lamportClock += 1
+		log.Printf("Sending deferred reply to %s, lamport clock: %d", request.GetRequesterAddress(), lamportClock)
 		return &pb.CriticalSectionResponce{LamportClock: lamportClock}, nil
 	}
 }
 
-func sendDeferredReplies() {
-	for _, peerAddress := range deferredReplies {
-		log.Printf("Sending deferred reply to %s", peerAddress)
-
-		conn, err := grpc.NewClient(peerAddress, grpc.WithInsecure())
-		if err != nil {
-			log.Printf("failed to connect to %s: %v", peerAddress, err)
-			continue
-		}
-
-		client := pb.NewPeer2PeerClient(conn)
-		lamportClock += 1
-
-		_, err = client.RequestCriticalSection(context.Background(), &pb.CriticalSectionRequest{
-			LamportClock:     lamportClock,
-			RequesterAddress: myAddress,
-		})
-		conn.Close()
-
-		if err != nil {
-			log.Printf("failed to send deferred reply: %v", err)
-		}
-	}
-	deferredReplies = []string{}
-}
-
 func requestCriticalSection() {
 	if len(peerAddresses) == 0 {
-		log.Printf("No peers, entering CS immediately")
+		log.Printf("No peers, entering CRITICAL SECTION immediately")
 		log.Printf("*** ENTERED CRITICAL SECTION ***")
 		return
 	}
@@ -134,14 +92,14 @@ func requestCriticalSection() {
 
 		client := pb.NewPeer2PeerClient(conn)
 
-		log.Printf("sending CS request to %s, lamport clock: %d", peerAddress, myRequestClock)
+		log.Printf("sending CRITICAL SECTION request to %s, lamport clock: %d", peerAddress, myRequestClock)
 
 		response, err := client.RequestCriticalSection(context.Background(), &pb.CriticalSectionRequest{
 			LamportClock:     myRequestClock,
 			RequesterAddress: myAddress})
 
 		if err != nil {
-			log.Fatalf("failed to send CS request: %v", err)
+			log.Fatalf("failed to send CRITICAL SECTION request: %v", err)
 		}
 
 		conn.Close()
@@ -160,9 +118,13 @@ func requestCriticalSection() {
 
 	log.Printf("*** EXITING CRITICAL SECTION ***")
 
-	if len(deferredReplies) > 0 {
-		log.Printf("Sending %d deferred replies", len(deferredReplies))
-		sendDeferredReplies()
+	if len(deferredChannels) > 0 {
+		log.Printf("Releasing %d deferred replies", len(deferredChannels))
+		for addr, ch := range deferredChannels {
+			log.Printf("Signaling deferred reply to %s", addr)
+			close(ch)
+		}
+		deferredChannels = make(map[string]chan bool)
 	}
 
 	myRequestClock = 0
@@ -249,6 +211,7 @@ func main() {
 	var max int64
 	max = 5000
 	lamportClock = 0
+	deferredChannels = make(map[string]chan bool)
 
 	fileName := "PeerList.txt"
 
@@ -294,6 +257,10 @@ func main() {
 
 	for len(peerAddresses) < 2 {
 	}
+
+	fmt.Println("you have 10 seconds to add more peers")
+
+	time.Sleep(10 * time.Second)
 
 	requestCriticalSection()
 
