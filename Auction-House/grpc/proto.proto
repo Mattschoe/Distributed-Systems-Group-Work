@@ -1,0 +1,65 @@
+syntax="proto3";
+
+package grpc;
+option go_package = "Auction-House/grpc/proto";
+
+service AuctionHouse {
+  rpc Bid(BidInfo) returns (BidAcknowledgement) {}
+  rpc Sell(Auction) returns (SellAcknowledgement) {}
+  rpc Result(Outcome) returns (Empty) {}
+  rpc AuctionOutcome(Auction) returns (Outcome) {}
+}
+
+/*
+ * processID: The ID of the process sending the bid
+ */
+message BidInfo {
+  int32 auctionID = 1;
+  int32 processID = 2;
+  int32 amount = 3;
+}
+
+/**
+ * Indicates whether the bid sent from the client was successful or not. Returns Fail when client underbid
+ */
+message BidAcknowledgement {
+  enum Status {
+    Fail = 0;
+    Success = 1;
+  }
+  Status status = 1;
+}
+
+message SellAcknowledgement {
+  enum Status {
+    FAIL = 0;
+    Success = 1;
+  }
+  Status status = 1;
+}
+
+/**
+ * AuctionStatus: Running = Clients can still bid | Finished = Auction is over and a winner has been decided
+ * winnerID: The processID of the current winner of the auction. When auction is Finished, this will be the winner
+ * currentBid: The current highest bid for this auction
+ * auctionID: The ID of this auction
+ */
+message Outcome {
+  enum AuctionStatus {
+    Running = 0;
+    Finished = 1;
+  }
+
+  AuctionStatus status = 1;
+  int32 winnerID = 2;
+  int32 currentBid = 3;
+  int32 auctionID = 4;
+}
+
+message Auction {
+  int32 ID = 1;
+  string product = 2;
+  int32 timeframe = 3;
+}
+    
+message Empty {}
