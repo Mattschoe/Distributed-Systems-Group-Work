@@ -23,6 +23,7 @@ const (
 	AuctionHouse_Sell_FullMethodName           = "/grpc.AuctionHouse/Sell"
 	AuctionHouse_Result_FullMethodName         = "/grpc.AuctionHouse/Result"
 	AuctionHouse_AuctionOutcome_FullMethodName = "/grpc.AuctionHouse/AuctionOutcome"
+	AuctionHouse_Quorum_FullMethodName         = "/grpc.AuctionHouse/Quorum"
 )
 
 // AuctionHouseClient is the client API for AuctionHouse service.
@@ -33,6 +34,7 @@ type AuctionHouseClient interface {
 	Sell(ctx context.Context, in *Auction, opts ...grpc.CallOption) (*SellAcknowledgement, error)
 	Result(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Empty, error)
 	AuctionOutcome(ctx context.Context, in *Auction, opts ...grpc.CallOption) (*Outcome, error)
+	Quorum(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Outcome, error)
 }
 
 type auctionHouseClient struct {
@@ -83,6 +85,16 @@ func (c *auctionHouseClient) AuctionOutcome(ctx context.Context, in *Auction, op
 	return out, nil
 }
 
+func (c *auctionHouseClient) Quorum(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Outcome, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Outcome)
+	err := c.cc.Invoke(ctx, AuctionHouse_Quorum_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuctionHouseServer is the server API for AuctionHouse service.
 // All implementations must embed UnimplementedAuctionHouseServer
 // for forward compatibility.
@@ -91,6 +103,7 @@ type AuctionHouseServer interface {
 	Sell(context.Context, *Auction) (*SellAcknowledgement, error)
 	Result(context.Context, *Outcome) (*Empty, error)
 	AuctionOutcome(context.Context, *Auction) (*Outcome, error)
+	Quorum(context.Context, *Outcome) (*Outcome, error)
 	mustEmbedUnimplementedAuctionHouseServer()
 }
 
@@ -112,6 +125,9 @@ func (UnimplementedAuctionHouseServer) Result(context.Context, *Outcome) (*Empty
 }
 func (UnimplementedAuctionHouseServer) AuctionOutcome(context.Context, *Auction) (*Outcome, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AuctionOutcome not implemented")
+}
+func (UnimplementedAuctionHouseServer) Quorum(context.Context, *Outcome) (*Outcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Quorum not implemented")
 }
 func (UnimplementedAuctionHouseServer) mustEmbedUnimplementedAuctionHouseServer() {}
 func (UnimplementedAuctionHouseServer) testEmbeddedByValue()                      {}
@@ -206,6 +222,24 @@ func _AuctionHouse_AuctionOutcome_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuctionHouse_Quorum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Outcome)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).Quorum(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuctionHouse_Quorum_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).Quorum(ctx, req.(*Outcome))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuctionHouse_ServiceDesc is the grpc.ServiceDesc for AuctionHouse service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -228,6 +262,10 @@ var AuctionHouse_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AuctionOutcome",
 			Handler:    _AuctionHouse_AuctionOutcome_Handler,
+		},
+		{
+			MethodName: "Quorum",
+			Handler:    _AuctionHouse_Quorum_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -8,6 +8,7 @@ service AuctionHouse {
   rpc Sell(Auction) returns (SellAcknowledgement) {}
   rpc Result(Outcome) returns (Empty) {}
   rpc AuctionOutcome(Auction) returns (Outcome) {}
+  rpc Quorum(Outcome) returns (Outcome) {} //When the auctioneer is lost the others holds a quorum agreeing on the outcome of the auction.
 }
 
 /*
@@ -26,6 +27,7 @@ message BidAcknowledgement {
   enum Status {
     Fail = 0;
     Success = 1;
+    TooLow = 2;
   }
   Status status = 1;
 }

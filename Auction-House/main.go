@@ -126,6 +126,12 @@ func sendBid(auctionID int, amount int) error {
 		return err
 	}
 
+	processID, err := strconv.Atoi(strings.Split(port, ":")[1])
+	if err != nil {
+		return err
+	}
+
+	bidSuccess := true
 	for _, port := range ports {
 		conn, err := grpc.NewClient("localhost"+port, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
@@ -133,10 +139,7 @@ func sendBid(auctionID int, amount int) error {
 			continue
 		}
 		client := pb.NewAuctionHouseClient(conn)
-		processID, err := strconv.Atoi(strings.Split(port, ":")[1])
-		if err != nil {
-			return err
-		}
+
 		ack, err := client.Bid(context.Background(), &pb.BidInfo{
 			AuctionID: int32(auctionID),
 			ProcessID: int32(processID),
@@ -146,13 +149,28 @@ func sendBid(auctionID int, amount int) error {
 			return err
 		}
 
-		if ack.Status == pb.BidAcknowledgement_Fail {
-			fmt.Println("Sending bid failed, try again!")
-			return nil
+		switch ack.Status {
+		case pb.BidAcknowledgement_Fail:
+			{
+				fmt.Println("Sending bid failed, try again!")
+				bidSuccess = false
+			}
+		case pb.BidAcknowledgement_TooLow:
+			{
+				fmt.Println("You bid too low, try again!")
+				bidSuccess = false
+			}
 		}
 	}
-
-	fmt.Println("Sending bid succeeded!")
+	if bidSuccess {
+		fmt.Println("Sending bid succeeded!")
+		ID2Auction[int32(auctionID)] = pb.Outcome{
+			Status:     pb.Outcome_Running,
+			AuctionID:  int32(auctionID),
+			WinnerID:   int32(processID),
+			CurrentBid: int32(amount),
+		}
+	}
 	return nil
 }
 
@@ -164,6 +182,7 @@ func (server *auctionServer) Bid(ctx context.Context, info *pb.BidInfo) (*pb.Bid
 		return &pb.BidAcknowledgement{Status: pb.BidAcknowledgement_Fail}, nil
 	}
 
+	fmt.Printf("Process: %d, bid on auction: %d, for %dkr \n", info.ProcessID, info.AuctionID, info.Amount)
 	if outcome.CurrentBid < info.Amount {
 		ID2Auction[info.AuctionID] = pb.Outcome{
 			Status:     outcome.Status,
@@ -174,7 +193,7 @@ func (server *auctionServer) Bid(ctx context.Context, info *pb.BidInfo) (*pb.Bid
 		return &pb.BidAcknowledgement{Status: pb.BidAcknowledgement_Success}, nil
 	}
 	fmt.Println("Bid too low!")
-	return &pb.BidAcknowledgement{Status: pb.BidAcknowledgement_Success}, nil
+	return &pb.BidAcknowledgement{Status: pb.BidAcknowledgement_TooLow}, nil
 }
 
 func sendAuctionResult(auctionID int32) error {
@@ -212,6 +231,7 @@ func sendAuctionResult(auctionID int32) error {
 
 func (server *auctionServer) Result(ctx context.Context, outcome *pb.Outcome) (*pb.Empty, error) {
 	fmt.Printf("Auction result: %v\n", outcome)
+	ID2Auction[outcome.AuctionID] = *outcome
 	return nil, nil
 }
 
@@ -273,7 +293,113 @@ func (server *auctionServer) Sell(ctx context.Context, auction *pb.Auction) (*pb
 		CurrentBid: -1,
 		AuctionID:  auction.ID,
 	}
+
+	//Timeout for Result
+	go func() {
+		waitTime := int(auction.Timeframe) + rand.Intn(20) //Random so everyone doesn't start yapping at once
+		time.Sleep(time.Duration(waitTime) * time.Second)
+
+		status := ID2Auction[auction.ID].Status
+		if status != pb.Outcome_Finished {
+			holdQuorum(auction.ID)
+		}
+	}()
+
 	return &pb.SellAcknowledgement{Status: pb.SellAcknowledgement_Success}, nil
+}
+
+// Holds a quorum agreeing to what the outcome of the auction should be
+func holdQuorum(auctionID int32) {
+	fmt.Println("Hey i think the auctioneer is dead, im holding a Quorum!")
+
+	ports, err := readNetwork()
+	if err != nil {
+		fmt.Printf("Error reading network ports: %v \n", err)
+		return
+	}
+
+	type outcomeKey struct {
+		Status     pb.Outcome_AuctionStatus
+		WinnerID   int32
+		CurrentBid int32
+		AuctionID  int32
+	}
+
+	outcome2Amount := make(map[outcomeKey]int)
+
+	//Stores this process idea of the outcome
+	outcome := ID2Auction[auctionID]
+	fmt.Printf("DEBUG: My outcome: %v", outcome)
+	outcome2Amount[outcomeKey{
+		Status:     pb.Outcome_Finished,
+		WinnerID:   outcome.WinnerID,
+		AuctionID:  outcome.AuctionID,
+		CurrentBid: outcome.CurrentBid,
+	}]++
+
+	//Gets outcome from every other port
+	for _, port := range ports {
+		conn, err := grpc.NewClient("localhost"+port, grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			fmt.Printf("Error connecting to client at port %s: %v \n", port, err)
+			continue
+		}
+		client := pb.NewAuctionHouseClient(conn)
+		clientOutcome, err := client.Quorum(context.Background(), &outcome)
+		if err != nil {
+			fmt.Printf("Error getting outcome from client!: %v \n", err)
+			continue
+		}
+		//Skips clients who hasn't registered any bids
+		if clientOutcome.WinnerID == -1 {
+			continue
+		}
+
+		key := outcomeKey{
+			Status:     pb.Outcome_Finished,
+			WinnerID:   clientOutcome.WinnerID,
+			CurrentBid: clientOutcome.CurrentBid,
+			AuctionID:  clientOutcome.AuctionID,
+		}
+
+		outcome2Amount[key]++
+	}
+
+	//Finds most agreed outcome
+	var highest = 0
+	var winner outcomeKey
+	for outcome, _ := range outcome2Amount {
+		amount := outcome2Amount[outcome]
+		fmt.Printf("Outcome: %v | amount: %d | highest: %d\n", outcome, amount, highest)
+		if amount > highest {
+			highest = amount
+			winner = outcome
+		}
+	}
+	newOutcome := pb.Outcome{
+		Status:     pb.Outcome_Finished,
+		WinnerID:   winner.WinnerID,
+		CurrentBid: winner.CurrentBid,
+		AuctionID:  winner.AuctionID,
+	}
+	fmt.Printf("New outcome: %v \n", newOutcome)
+	ID2Auction[auctionID] = newOutcome
+	fmt.Printf("Quorum is finished and we agreed on the result: %v \n", ID2Auction[auctionID])
+	for _, port := range ports {
+		conn, err := grpc.NewClient("localhost"+port, grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			fmt.Printf("Error connecting to client at port %s: %v \n", port, err)
+			continue
+		}
+		client := pb.NewAuctionHouseClient(conn)
+		client.Result(context.Background(), &newOutcome)
+	}
+}
+
+func (server *auctionServer) Quorum(ctx context.Context, outcome *pb.Outcome) (*pb.Outcome, error) {
+	fmt.Println("A process thinks a auction is dead, i'll send my outcome!")
+	myOutcome := ID2Auction[outcome.AuctionID]
+	return &myOutcome, nil
 }
 
 // Reads network and returns the peers connected to the network

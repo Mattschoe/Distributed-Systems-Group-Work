@@ -26,6 +26,7 @@ type BidAcknowledgement_Status int32
 const (
 	BidAcknowledgement_Fail    BidAcknowledgement_Status = 0
 	BidAcknowledgement_Success BidAcknowledgement_Status = 1
+	BidAcknowledgement_TooLow  BidAcknowledgement_Status = 2
 )
 
 // Enum value maps for BidAcknowledgement_Status.
@@ -33,10 +34,12 @@ var (
 	BidAcknowledgement_Status_name = map[int32]string{
 		0: "Fail",
 		1: "Success",
+		2: "TooLow",
 	}
 	BidAcknowledgement_Status_value = map[string]int32{
 		"Fail":    0,
 		"Success": 1,
+		"TooLow":  2,
 	}
 )
 
@@ -487,12 +490,14 @@ const file_proto_proto_rawDesc = "" +
 	"\aBidInfo\x12\x1c\n" +
 	"\tauctionID\x18\x01 \x01(\x05R\tauctionID\x12\x1c\n" +
 	"\tprocessID\x18\x02 \x01(\x05R\tprocessID\x12\x16\n" +
-	"\x06amount\x18\x03 \x01(\x05R\x06amount\"n\n" +
+	"\x06amount\x18\x03 \x01(\x05R\x06amount\"z\n" +
 	"\x12BidAcknowledgement\x127\n" +
-	"\x06status\x18\x01 \x01(\x0e2\x1f.grpc.BidAcknowledgement.StatusR\x06status\"\x1f\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x1f.grpc.BidAcknowledgement.StatusR\x06status\"+\n" +
 	"\x06Status\x12\b\n" +
 	"\x04Fail\x10\x00\x12\v\n" +
-	"\aSuccess\x10\x01\"p\n" +
+	"\aSuccess\x10\x01\x12\n" +
+	"\n" +
+	"\x06TooLow\x10\x02\"p\n" +
 	"\x13SellAcknowledgement\x128\n" +
 	"\x06status\x18\x01 \x01(\x0e2 .grpc.SellAcknowledgement.StatusR\x06status\"\x1f\n" +
 	"\x06Status\x12\b\n" +
@@ -512,12 +517,13 @@ const file_proto_proto_rawDesc = "" +
 	"\x02ID\x18\x01 \x01(\x05R\x02ID\x12\x18\n" +
 	"\aproduct\x18\x02 \x01(\tR\aproduct\x12\x1c\n" +
 	"\ttimeframe\x18\x03 \x01(\x05R\ttimeframe\"\a\n" +
-	"\x05Empty2\xce\x01\n" +
+	"\x05Empty2\xf8\x01\n" +
 	"\fAuctionHouse\x120\n" +
 	"\x03Bid\x12\r.grpc.BidInfo\x1a\x18.grpc.BidAcknowledgement\"\x00\x122\n" +
 	"\x04Sell\x12\r.grpc.Auction\x1a\x19.grpc.SellAcknowledgement\"\x00\x12&\n" +
 	"\x06Result\x12\r.grpc.Outcome\x1a\v.grpc.Empty\"\x00\x120\n" +
-	"\x0eAuctionOutcome\x12\r.grpc.Auction\x1a\r.grpc.Outcome\"\x00B\x1aZ\x18Auction-House/grpc/protob\x06proto3"
+	"\x0eAuctionOutcome\x12\r.grpc.Auction\x1a\r.grpc.Outcome\"\x00\x12(\n" +
+	"\x06Quorum\x12\r.grpc.Outcome\x1a\r.grpc.Outcome\"\x00B\x1aZ\x18Auction-House/grpc/protob\x06proto3"
 
 var (
 	file_proto_proto_rawDescOnce sync.Once
@@ -552,12 +558,14 @@ var file_proto_proto_depIdxs = []int32{
 	7, // 4: grpc.AuctionHouse.Sell:input_type -> grpc.Auction
 	6, // 5: grpc.AuctionHouse.Result:input_type -> grpc.Outcome
 	7, // 6: grpc.AuctionHouse.AuctionOutcome:input_type -> grpc.Auction
-	4, // 7: grpc.AuctionHouse.Bid:output_type -> grpc.BidAcknowledgement
-	5, // 8: grpc.AuctionHouse.Sell:output_type -> grpc.SellAcknowledgement
-	8, // 9: grpc.AuctionHouse.Result:output_type -> grpc.Empty
-	6, // 10: grpc.AuctionHouse.AuctionOutcome:output_type -> grpc.Outcome
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
+	6, // 7: grpc.AuctionHouse.Quorum:input_type -> grpc.Outcome
+	4, // 8: grpc.AuctionHouse.Bid:output_type -> grpc.BidAcknowledgement
+	5, // 9: grpc.AuctionHouse.Sell:output_type -> grpc.SellAcknowledgement
+	8, // 10: grpc.AuctionHouse.Result:output_type -> grpc.Empty
+	6, // 11: grpc.AuctionHouse.AuctionOutcome:output_type -> grpc.Outcome
+	6, // 12: grpc.AuctionHouse.Quorum:output_type -> grpc.Outcome
+	8, // [8:13] is the sub-list for method output_type
+	3, // [3:8] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
 	3, // [3:3] is the sub-list for extension extendee
 	0, // [0:3] is the sub-list for field type_name
