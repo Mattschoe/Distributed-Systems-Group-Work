@@ -1,0 +1,61 @@
+syntax="proto3";
+
+package auctioneer;
+
+option go_package = "distributed-Auction-System/proto";
+
+service auctioneer{
+  rpc SendBid(BidRequest) returns (BidResponce){}
+  rpc Results(ResultRequest) returns (ResultResponce){}
+  rpc JoinMesh(JoinRequest) returns (JoinResponce){}
+  rpc RemoveFromMesh(RemoveRequest) returns (RemoveResponce){}
+}
+
+message RemoveRequest{
+  int64 LamportClock = 1;
+  string PortToRemove = 2;
+  string PortToAdd = 3;
+}
+
+message RemoveResponce{
+  int64 LamportClock = 1;
+}
+
+message JoinRequest{
+  int64 LamportClock = 1;
+  repeated string KnownAddresses = 2;
+}
+
+message JoinResponce{
+  int64 LamportClock = 1;
+  repeated string KnownAddresses = 2;
+}
+
+message BidRequest{
+  int64 LamportClock = 1;
+  int64 Bid = 2;
+}
+
+message BidResponce{
+  enum Ack {
+    SUCCESS = 0;
+    FAIL = 1;
+    EXCEPTION = 2;
+  }
+  int64 LamportClock = 1;
+  Ack SuccesfulBid = 2;
+}
+
+message ResultResponce{
+  int64 LamportClock = 1;
+  bool IsAuctionRunning = 2;
+  string Winner = 3;
+  int64 TopBid = 4;
+}
+
+  
+message ResultRequest {
+  int64 LamportClock = 1;
+}
+
+message Empty{}
