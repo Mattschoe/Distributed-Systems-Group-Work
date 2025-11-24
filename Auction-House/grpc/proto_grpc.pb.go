@@ -21,9 +21,10 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	AuctionHouse_Bid_FullMethodName            = "/grpc.AuctionHouse/Bid"
 	AuctionHouse_Sell_FullMethodName           = "/grpc.AuctionHouse/Sell"
-	AuctionHouse_Result_FullMethodName         = "/grpc.AuctionHouse/Result"
 	AuctionHouse_AuctionOutcome_FullMethodName = "/grpc.AuctionHouse/AuctionOutcome"
-	AuctionHouse_Quorum_FullMethodName         = "/grpc.AuctionHouse/Quorum"
+	AuctionHouse_Result_FullMethodName         = "/grpc.AuctionHouse/Result"
+	AuctionHouse_UpdateResult_FullMethodName   = "/grpc.AuctionHouse/UpdateResult"
+	AuctionHouse_Status_FullMethodName         = "/grpc.AuctionHouse/Status"
 )
 
 // AuctionHouseClient is the client API for AuctionHouse service.
@@ -31,10 +32,11 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuctionHouseClient interface {
 	Bid(ctx context.Context, in *BidInfo, opts ...grpc.CallOption) (*BidAcknowledgement, error)
-	Sell(ctx context.Context, in *Auction, opts ...grpc.CallOption) (*SellAcknowledgement, error)
-	Result(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Empty, error)
+	Sell(ctx context.Context, in *Auction, opts ...grpc.CallOption) (*Outcome, error)
 	AuctionOutcome(ctx context.Context, in *Auction, opts ...grpc.CallOption) (*Outcome, error)
-	Quorum(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Outcome, error)
+	Result(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Outcome, error)
+	UpdateResult(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Empty, error)
+	Status(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Auctions, error)
 }
 
 type auctionHouseClient struct {
@@ -55,20 +57,10 @@ func (c *auctionHouseClient) Bid(ctx context.Context, in *BidInfo, opts ...grpc.
 	return out, nil
 }
 
-func (c *auctionHouseClient) Sell(ctx context.Context, in *Auction, opts ...grpc.CallOption) (*SellAcknowledgement, error) {
+func (c *auctionHouseClient) Sell(ctx context.Context, in *Auction, opts ...grpc.CallOption) (*Outcome, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SellAcknowledgement)
+	out := new(Outcome)
 	err := c.cc.Invoke(ctx, AuctionHouse_Sell_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *auctionHouseClient) Result(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, AuctionHouse_Result_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +77,30 @@ func (c *auctionHouseClient) AuctionOutcome(ctx context.Context, in *Auction, op
 	return out, nil
 }
 
-func (c *auctionHouseClient) Quorum(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Outcome, error) {
+func (c *auctionHouseClient) Result(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Outcome, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Outcome)
-	err := c.cc.Invoke(ctx, AuctionHouse_Quorum_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, AuctionHouse_Result_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) UpdateResult(ctx context.Context, in *Outcome, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, AuctionHouse_UpdateResult_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auctionHouseClient) Status(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Auctions, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Auctions)
+	err := c.cc.Invoke(ctx, AuctionHouse_Status_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -100,10 +112,11 @@ func (c *auctionHouseClient) Quorum(ctx context.Context, in *Outcome, opts ...gr
 // for forward compatibility.
 type AuctionHouseServer interface {
 	Bid(context.Context, *BidInfo) (*BidAcknowledgement, error)
-	Sell(context.Context, *Auction) (*SellAcknowledgement, error)
-	Result(context.Context, *Outcome) (*Empty, error)
+	Sell(context.Context, *Auction) (*Outcome, error)
 	AuctionOutcome(context.Context, *Auction) (*Outcome, error)
-	Quorum(context.Context, *Outcome) (*Outcome, error)
+	Result(context.Context, *Outcome) (*Outcome, error)
+	UpdateResult(context.Context, *Outcome) (*Empty, error)
+	Status(context.Context, *Empty) (*Auctions, error)
 	mustEmbedUnimplementedAuctionHouseServer()
 }
 
@@ -117,17 +130,20 @@ type UnimplementedAuctionHouseServer struct{}
 func (UnimplementedAuctionHouseServer) Bid(context.Context, *BidInfo) (*BidAcknowledgement, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Bid not implemented")
 }
-func (UnimplementedAuctionHouseServer) Sell(context.Context, *Auction) (*SellAcknowledgement, error) {
+func (UnimplementedAuctionHouseServer) Sell(context.Context, *Auction) (*Outcome, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Sell not implemented")
-}
-func (UnimplementedAuctionHouseServer) Result(context.Context, *Outcome) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Result not implemented")
 }
 func (UnimplementedAuctionHouseServer) AuctionOutcome(context.Context, *Auction) (*Outcome, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AuctionOutcome not implemented")
 }
-func (UnimplementedAuctionHouseServer) Quorum(context.Context, *Outcome) (*Outcome, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Quorum not implemented")
+func (UnimplementedAuctionHouseServer) Result(context.Context, *Outcome) (*Outcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Result not implemented")
+}
+func (UnimplementedAuctionHouseServer) UpdateResult(context.Context, *Outcome) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateResult not implemented")
+}
+func (UnimplementedAuctionHouseServer) Status(context.Context, *Empty) (*Auctions, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
 }
 func (UnimplementedAuctionHouseServer) mustEmbedUnimplementedAuctionHouseServer() {}
 func (UnimplementedAuctionHouseServer) testEmbeddedByValue()                      {}
@@ -186,24 +202,6 @@ func _AuctionHouse_Sell_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuctionHouse_Result_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Outcome)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuctionHouseServer).Result(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuctionHouse_Result_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuctionHouseServer).Result(ctx, req.(*Outcome))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AuctionHouse_AuctionOutcome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Auction)
 	if err := dec(in); err != nil {
@@ -222,20 +220,56 @@ func _AuctionHouse_AuctionOutcome_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuctionHouse_Quorum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _AuctionHouse_Result_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Outcome)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuctionHouseServer).Quorum(ctx, in)
+		return srv.(AuctionHouseServer).Result(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuctionHouse_Quorum_FullMethodName,
+		FullMethod: AuctionHouse_Result_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuctionHouseServer).Quorum(ctx, req.(*Outcome))
+		return srv.(AuctionHouseServer).Result(ctx, req.(*Outcome))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_UpdateResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Outcome)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).UpdateResult(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuctionHouse_UpdateResult_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).UpdateResult(ctx, req.(*Outcome))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuctionHouse_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionHouseServer).Status(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuctionHouse_Status_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionHouseServer).Status(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -256,16 +290,20 @@ var AuctionHouse_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuctionHouse_Sell_Handler,
 		},
 		{
-			MethodName: "Result",
-			Handler:    _AuctionHouse_Result_Handler,
-		},
-		{
 			MethodName: "AuctionOutcome",
 			Handler:    _AuctionHouse_AuctionOutcome_Handler,
 		},
 		{
-			MethodName: "Quorum",
-			Handler:    _AuctionHouse_Quorum_Handler,
+			MethodName: "Result",
+			Handler:    _AuctionHouse_Result_Handler,
+		},
+		{
+			MethodName: "UpdateResult",
+			Handler:    _AuctionHouse_UpdateResult_Handler,
+		},
+		{
+			MethodName: "Status",
+			Handler:    _AuctionHouse_Status_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

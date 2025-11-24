@@ -5,10 +5,11 @@ option go_package = "Auction-House/grpc/proto";
 
 service AuctionHouse {
   rpc Bid(BidInfo) returns (BidAcknowledgement) {}
-  rpc Sell(Auction) returns (SellAcknowledgement) {}
-  rpc Result(Outcome) returns (Empty) {}
+  rpc Sell(Auction) returns (Outcome) {}
   rpc AuctionOutcome(Auction) returns (Outcome) {}
-  rpc Quorum(Outcome) returns (Outcome) {} //When the auctioneer is lost the others holds a quorum agreeing on the outcome of the auction.
+  rpc Result(Outcome) returns (Outcome) {} //When the auctioneer is lost the others holds a quorum agreeing on the outcome of the auction.
+  rpc UpdateResult(Outcome) returns (Empty) {}
+  rpc Status(Empty) returns (Auctions) {}
 }
 
 /*
@@ -63,5 +64,9 @@ message Auction {
   string product = 2;
   int32 timeframe = 3;
 }
-    
+
+message Auctions {
+  repeated Outcome auctions = 1;
+}
+
 message Empty {}

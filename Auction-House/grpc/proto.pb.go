@@ -446,6 +446,50 @@ func (x *Auction) GetTimeframe() int32 {
 	return 0
 }
 
+type Auctions struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Auctions      []*Outcome             `protobuf:"bytes,1,rep,name=auctions,proto3" json:"auctions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Auctions) Reset() {
+	*x = Auctions{}
+	mi := &file_proto_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Auctions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Auctions) ProtoMessage() {}
+
+func (x *Auctions) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Auctions.ProtoReflect.Descriptor instead.
+func (*Auctions) Descriptor() ([]byte, []int) {
+	return file_proto_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Auctions) GetAuctions() []*Outcome {
+	if x != nil {
+		return x.Auctions
+	}
+	return nil
+}
+
 type Empty struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -454,7 +498,7 @@ type Empty struct {
 
 func (x *Empty) Reset() {
 	*x = Empty{}
-	mi := &file_proto_proto_msgTypes[5]
+	mi := &file_proto_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -466,7 +510,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[5]
+	mi := &file_proto_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -479,7 +523,7 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{5}
+	return file_proto_proto_rawDescGZIP(), []int{6}
 }
 
 var File_proto_proto protoreflect.FileDescriptor
@@ -516,14 +560,17 @@ const file_proto_proto_rawDesc = "" +
 	"\aAuction\x12\x0e\n" +
 	"\x02ID\x18\x01 \x01(\x05R\x02ID\x12\x18\n" +
 	"\aproduct\x18\x02 \x01(\tR\aproduct\x12\x1c\n" +
-	"\ttimeframe\x18\x03 \x01(\x05R\ttimeframe\"\a\n" +
-	"\x05Empty2\xf8\x01\n" +
+	"\ttimeframe\x18\x03 \x01(\x05R\ttimeframe\"5\n" +
+	"\bAuctions\x12)\n" +
+	"\bauctions\x18\x01 \x03(\v2\r.grpc.OutcomeR\bauctions\"\a\n" +
+	"\x05Empty2\x9b\x02\n" +
 	"\fAuctionHouse\x120\n" +
-	"\x03Bid\x12\r.grpc.BidInfo\x1a\x18.grpc.BidAcknowledgement\"\x00\x122\n" +
-	"\x04Sell\x12\r.grpc.Auction\x1a\x19.grpc.SellAcknowledgement\"\x00\x12&\n" +
-	"\x06Result\x12\r.grpc.Outcome\x1a\v.grpc.Empty\"\x00\x120\n" +
+	"\x03Bid\x12\r.grpc.BidInfo\x1a\x18.grpc.BidAcknowledgement\"\x00\x12&\n" +
+	"\x04Sell\x12\r.grpc.Auction\x1a\r.grpc.Outcome\"\x00\x120\n" +
 	"\x0eAuctionOutcome\x12\r.grpc.Auction\x1a\r.grpc.Outcome\"\x00\x12(\n" +
-	"\x06Quorum\x12\r.grpc.Outcome\x1a\r.grpc.Outcome\"\x00B\x1aZ\x18Auction-House/grpc/protob\x06proto3"
+	"\x06Result\x12\r.grpc.Outcome\x1a\r.grpc.Outcome\"\x00\x12,\n" +
+	"\fUpdateResult\x12\r.grpc.Outcome\x1a\v.grpc.Empty\"\x00\x12'\n" +
+	"\x06Status\x12\v.grpc.Empty\x1a\x0e.grpc.Auctions\"\x00B\x1aZ\x18Auction-House/grpc/protob\x06proto3"
 
 var (
 	file_proto_proto_rawDescOnce sync.Once
@@ -538,7 +585,7 @@ func file_proto_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_proto_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_proto_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proto_proto_goTypes = []any{
 	(BidAcknowledgement_Status)(0),  // 0: grpc.BidAcknowledgement.Status
 	(SellAcknowledgement_Status)(0), // 1: grpc.SellAcknowledgement.Status
@@ -548,27 +595,31 @@ var file_proto_proto_goTypes = []any{
 	(*SellAcknowledgement)(nil),     // 5: grpc.SellAcknowledgement
 	(*Outcome)(nil),                 // 6: grpc.Outcome
 	(*Auction)(nil),                 // 7: grpc.Auction
-	(*Empty)(nil),                   // 8: grpc.Empty
+	(*Auctions)(nil),                // 8: grpc.Auctions
+	(*Empty)(nil),                   // 9: grpc.Empty
 }
 var file_proto_proto_depIdxs = []int32{
-	0, // 0: grpc.BidAcknowledgement.status:type_name -> grpc.BidAcknowledgement.Status
-	1, // 1: grpc.SellAcknowledgement.status:type_name -> grpc.SellAcknowledgement.Status
-	2, // 2: grpc.Outcome.status:type_name -> grpc.Outcome.AuctionStatus
-	3, // 3: grpc.AuctionHouse.Bid:input_type -> grpc.BidInfo
-	7, // 4: grpc.AuctionHouse.Sell:input_type -> grpc.Auction
-	6, // 5: grpc.AuctionHouse.Result:input_type -> grpc.Outcome
-	7, // 6: grpc.AuctionHouse.AuctionOutcome:input_type -> grpc.Auction
-	6, // 7: grpc.AuctionHouse.Quorum:input_type -> grpc.Outcome
-	4, // 8: grpc.AuctionHouse.Bid:output_type -> grpc.BidAcknowledgement
-	5, // 9: grpc.AuctionHouse.Sell:output_type -> grpc.SellAcknowledgement
-	8, // 10: grpc.AuctionHouse.Result:output_type -> grpc.Empty
-	6, // 11: grpc.AuctionHouse.AuctionOutcome:output_type -> grpc.Outcome
-	6, // 12: grpc.AuctionHouse.Quorum:output_type -> grpc.Outcome
-	8, // [8:13] is the sub-list for method output_type
-	3, // [3:8] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0,  // 0: grpc.BidAcknowledgement.status:type_name -> grpc.BidAcknowledgement.Status
+	1,  // 1: grpc.SellAcknowledgement.status:type_name -> grpc.SellAcknowledgement.Status
+	2,  // 2: grpc.Outcome.status:type_name -> grpc.Outcome.AuctionStatus
+	6,  // 3: grpc.Auctions.auctions:type_name -> grpc.Outcome
+	3,  // 4: grpc.AuctionHouse.Bid:input_type -> grpc.BidInfo
+	7,  // 5: grpc.AuctionHouse.Sell:input_type -> grpc.Auction
+	7,  // 6: grpc.AuctionHouse.AuctionOutcome:input_type -> grpc.Auction
+	6,  // 7: grpc.AuctionHouse.Result:input_type -> grpc.Outcome
+	6,  // 8: grpc.AuctionHouse.UpdateResult:input_type -> grpc.Outcome
+	9,  // 9: grpc.AuctionHouse.Status:input_type -> grpc.Empty
+	4,  // 10: grpc.AuctionHouse.Bid:output_type -> grpc.BidAcknowledgement
+	6,  // 11: grpc.AuctionHouse.Sell:output_type -> grpc.Outcome
+	6,  // 12: grpc.AuctionHouse.AuctionOutcome:output_type -> grpc.Outcome
+	6,  // 13: grpc.AuctionHouse.Result:output_type -> grpc.Outcome
+	9,  // 14: grpc.AuctionHouse.UpdateResult:output_type -> grpc.Empty
+	8,  // 15: grpc.AuctionHouse.Status:output_type -> grpc.Auctions
+	10, // [10:16] is the sub-list for method output_type
+	4,  // [4:10] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_proto_proto_init() }
@@ -582,7 +633,7 @@ func file_proto_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_proto_rawDesc), len(file_proto_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
