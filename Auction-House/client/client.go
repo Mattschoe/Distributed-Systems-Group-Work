@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rogpeppe/go-internal/lockedfile"
@@ -21,12 +22,13 @@ import (
 
 var filename string
 var port string
-var ID2Auction map[int32]pb.Outcome
+var ID2Auction map[int32]*pb.Outcome
+var auctionMutex sync.RWMutex
 
 func main() {
 	filename = filepath.Join(os.TempDir(), "LiveProcesses.txt")
 	port = ":" + strconv.Itoa(rand.Intn(10_000))
-	ID2Auction = make(map[int32]pb.Outcome)
+	ID2Auction = make(map[int32]*pb.Outcome)
 	listener, err := net.Listen("tcp", port)
 	if err != nil {
 		panic(err)
@@ -77,7 +79,7 @@ func requestStatus() {
 		return
 	}
 
-	ID2Auction := make(map[int32]pb.Outcome)
+	localAuctions := make(map[int32]*pb.Outcome)
 	for _, port := range ports {
 		conn, err := grpc.NewClient("localhost"+port, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
@@ -90,12 +92,12 @@ func requestStatus() {
 			fmt.Printf("Error getting status: %v \n", err)
 		}
 		for _, auction := range auctions.Auctions {
-			ID2Auction[auction.AuctionID] = *auction
+			localAuctions[auction.AuctionID] = auction
 		}
 	}
 
 	fmt.Println("Current auctions exists:")
-	for ID, auction := range ID2Auction {
+	for ID, auction := range localAuctions {
 		fmt.Printf("%d: \n", ID)
 		fmt.Printf("- status: %v \n", auction.Status.String())
 		switch auction.Status {
@@ -106,7 +108,7 @@ func requestStatus() {
 			}
 		case pb.Outcome_Finished:
 			{
-				fmt.Printf("f- Winner: %d \n", auction.WinnerID)
+				fmt.Printf("- Winner: %d \n", auction.WinnerID)
 				fmt.Printf("- Winning Bid: %d \n", auction.CurrentBid)
 			}
 		}
@@ -130,7 +132,10 @@ func holdQuorum(auctionID int32) {
 	}
 
 	outcome2Amount := make(map[outcomeKey]int)
+
+	auctionMutex.RLock()
 	auction := ID2Auction[auctionID]
+	auctionMutex.RUnlock()
 
 	//Gets outcome from every other port
 	for _, port := range ports {
@@ -140,7 +145,7 @@ func holdQuorum(auctionID int32) {
 			continue
 		}
 		client := pb.NewAuctionHouseClient(conn)
-		clientOutcome, err := client.Result(context.Background(), &auction)
+		clientOutcome, err := client.Result(context.Background(), auction)
 		if err != nil {
 			fmt.Printf("Error getting outcome from client!: %v \n", err)
 			continue
@@ -170,14 +175,18 @@ func holdQuorum(auctionID int32) {
 			winner = outcome
 		}
 	}
-	newOutcome := pb.Outcome{
+	newOutcome := &pb.Outcome{
 		Status:     pb.Outcome_Finished,
 		WinnerID:   winner.WinnerID,
 		CurrentBid: winner.CurrentBid,
 		AuctionID:  winner.AuctionID,
 	}
+
+	auctionMutex.Lock()
 	ID2Auction[auctionID] = newOutcome
-	fmt.Printf("Quorum is finished and the result is: %v \n", &newOutcome)
+	auctionMutex.Unlock()
+
+	fmt.Printf("Quorum is finished and the result is: %v \n", newOutcome)
 	for _, port := range ports {
 		conn, err := grpc.NewClient("localhost"+port, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
@@ -185,7 +194,7 @@ func holdQuorum(auctionID int32) {
 			continue
 		}
 		client := pb.NewAuctionHouseClient(conn)
-		ack, err := client.UpdateResult(context.Background(), &newOutcome)
+		ack, err := client.UpdateResult(context.Background(), newOutcome)
 		if ack == nil || err != nil {
 			fmt.Println("Failed with updating the auction result to the server!")
 		}
@@ -238,12 +247,14 @@ func sendBid(auctionID int, amount int) error {
 	}
 	if bidSuccess {
 		fmt.Println("Sending bid succeeded!")
-		ID2Auction[int32(auctionID)] = pb.Outcome{
+		auctionMutex.Lock()
+		ID2Auction[int32(auctionID)] = &pb.Outcome{
 			Status:     pb.Outcome_Running,
 			AuctionID:  int32(auctionID),
 			WinnerID:   int32(processID),
 			CurrentBid: int32(amount),
 		}
+		auctionMutex.Unlock()
 	}
 	return nil
 }
@@ -256,15 +267,17 @@ func sendAuction(product string, timeframe int) {
 		return
 	}
 
-	var acks []pb.Outcome
+	var acks []*pb.Outcome
 	auctionID := int32(rand.Intn(10_000))
 
-	ID2Auction[auctionID] = pb.Outcome{
+	auctionMutex.Lock()
+	ID2Auction[auctionID] = &pb.Outcome{
 		Status:     pb.Outcome_Running,
 		WinnerID:   -1,
 		CurrentBid: -1,
 		AuctionID:  auctionID,
 	}
+	auctionMutex.Unlock()
 
 	for _, port := range ports {
 		conn, err := grpc.NewClient("localhost"+port, grpc.WithInsecure(), grpc.WithBlock())
@@ -284,7 +297,7 @@ func sendAuction(product string, timeframe int) {
 				fmt.Printf("Error holding auction: %v \n", err)
 				return
 			}
-			acks = append(acks, *ack)
+			acks = append(acks, ack)
 		}()
 	}
 
@@ -293,7 +306,7 @@ func sendAuction(product string, timeframe int) {
 	time.Sleep(time.Duration(float32(timeframe)*1.5) * time.Second)
 	var success int
 	for _, ack := range acks {
-		if ack.Status == pb.Outcome_Finished {
+		if ack.GetStatus() == pb.Outcome_Finished {
 			success++
 		}
 	}

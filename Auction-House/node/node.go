@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rogpeppe/go-internal/lockedfile"
@@ -21,7 +22,8 @@ import (
 
 var filename string
 var port string
-var ID2Auction map[int32]pb.Outcome
+var ID2Auction map[int32]*pb.Outcome
+var auctionMutex sync.RWMutex
 
 type auctionServer struct {
 	pb.UnimplementedAuctionHouseServer
@@ -30,7 +32,7 @@ type auctionServer struct {
 func main() {
 	filename = filepath.Join(os.TempDir(), "LiveProcesses.txt")
 	port = ":" + strconv.Itoa(rand.Intn(10_000))
-	ID2Auction = make(map[int32]pb.Outcome)
+	ID2Auction = make(map[int32]*pb.Outcome)
 	listener, err := net.Listen("tcp", port)
 	if err != nil {
 		panic(err)
@@ -73,6 +75,9 @@ func main() {
 }
 
 func (server *auctionServer) Bid(ctx context.Context, info *pb.BidInfo) (*pb.BidAcknowledgement, error) {
+	auctionMutex.Lock()
+	defer auctionMutex.Unlock()
+
 	outcome, ok := ID2Auction[info.AuctionID]
 	if !ok {
 		//TODO Fix
@@ -80,13 +85,19 @@ func (server *auctionServer) Bid(ctx context.Context, info *pb.BidInfo) (*pb.Bid
 		return &pb.BidAcknowledgement{Status: pb.BidAcknowledgement_Fail}, nil
 	}
 
+	// Check if auction is already finished
+	if outcome.GetStatus() == pb.Outcome_Finished {
+		fmt.Printf("Auction %d is already finished. Rejecting bid from process %d.\n", info.AuctionID, info.ProcessID)
+		return &pb.BidAcknowledgement{Status: pb.BidAcknowledgement_Fail}, nil
+	}
+
 	fmt.Printf("Process: %d, bid on auction: %d, for %dkr \n", info.ProcessID, info.AuctionID, info.Amount)
-	if outcome.CurrentBid < info.Amount {
-		ID2Auction[info.AuctionID] = pb.Outcome{
-			Status:     outcome.Status,
+	if outcome.GetCurrentBid() < info.Amount {
+		ID2Auction[info.AuctionID] = &pb.Outcome{
+			Status:     outcome.GetStatus(),
 			WinnerID:   info.ProcessID,
 			CurrentBid: info.Amount,
-			AuctionID:  outcome.AuctionID,
+			AuctionID:  outcome.GetAuctionID(),
 		}
 		return &pb.BidAcknowledgement{Status: pb.BidAcknowledgement_Success}, nil
 	}
@@ -96,29 +107,40 @@ func (server *auctionServer) Bid(ctx context.Context, info *pb.BidInfo) (*pb.Bid
 
 func (server *auctionServer) Sell(ctx context.Context, auction *pb.Auction) (*pb.Outcome, error) {
 	fmt.Printf("A auction has started! Auction n. %d is selling: '%s' at timeframe: %d \n", int(auction.ID), auction.Product, int(auction.Timeframe))
-	ID2Auction[auction.ID] = pb.Outcome{
+	
+	auctionMutex.Lock()
+	ID2Auction[auction.ID] = &pb.Outcome{
 		Status:     pb.Outcome_Running,
 		WinnerID:   -1,
 		CurrentBid: -1,
 		AuctionID:  auction.ID,
 	}
+	auctionMutex.Unlock()
 
 	timeframe := time.Duration(auction.Timeframe) * time.Second
 
 	select {
 	case <-time.After(timeframe):
 		{
-			status := ID2Auction[auction.ID]
-			ID2Auction[auction.ID] = pb.Outcome{
+			auctionMutex.Lock()
+			currentStatus := ID2Auction[auction.ID]
+			ID2Auction[auction.ID] = &pb.Outcome{
 				Status:     pb.Outcome_Finished,
-				WinnerID:   status.WinnerID,
-				CurrentBid: status.CurrentBid,
+				WinnerID:   currentStatus.GetWinnerID(),
+				CurrentBid: currentStatus.GetCurrentBid(),
 				AuctionID:  auction.ID,
 			}
 
-			result := ID2Auction[auction.ID]
-			fmt.Printf("Auction is over, sending the result: { %v } \n", &result)
-			return &result, nil
+			result := &pb.Outcome{
+				Status:     pb.Outcome_Finished,
+				WinnerID:   currentStatus.GetWinnerID(),
+				CurrentBid: currentStatus.GetCurrentBid(),
+				AuctionID:  auction.ID,
+			}
+			auctionMutex.Unlock()
+			
+			fmt.Printf("Auction is over, sending the result: { %v } \n", result)
+			return result, nil
 		}
 	case <-ctx.Done():
 		fmt.Println("Context cancelled")
@@ -127,9 +149,20 @@ func (server *auctionServer) Sell(ctx context.Context, auction *pb.Auction) (*pb
 }
 
 func (server *auctionServer) Status(ctx context.Context, empty *pb.Empty) (*pb.Auctions, error) {
+	auctionMutex.RLock()
+	defer auctionMutex.RUnlock()
+	
 	var auctions []*pb.Outcome
-	for _, auction := range ID2Auction {
-		auctions = append(auctions, &auction)
+	for auctionID := range ID2Auction {
+		auction := ID2Auction[auctionID]
+		// Create a copy to avoid lock issues
+		auctionCopy := &pb.Outcome{
+			Status:     auction.GetStatus(),
+			WinnerID:   auction.GetWinnerID(),
+			CurrentBid: auction.GetCurrentBid(),
+			AuctionID:  auction.GetAuctionID(),
+		}
+		auctions = append(auctions, auctionCopy)
 	}
 	return &pb.Auctions{
 		Auctions: auctions,
@@ -137,12 +170,27 @@ func (server *auctionServer) Status(ctx context.Context, empty *pb.Empty) (*pb.A
 }
 
 func (server *auctionServer) Result(ctx context.Context, outcome *pb.Outcome) (*pb.Outcome, error) {
+	auctionMutex.RLock()
 	myOutcome := ID2Auction[outcome.AuctionID]
-	return &myOutcome, nil
+	auctionMutex.RUnlock()
+	
+	return &pb.Outcome{
+		Status:     myOutcome.GetStatus(),
+		WinnerID:   myOutcome.GetWinnerID(),
+		CurrentBid: myOutcome.GetCurrentBid(),
+		AuctionID:  myOutcome.GetAuctionID(),
+	}, nil
 }
 
 func (server *auctionServer) UpdateResult(ctx context.Context, outcome *pb.Outcome) (*pb.Empty, error) {
-	ID2Auction[outcome.AuctionID] = *outcome
+	auctionMutex.Lock()
+	ID2Auction[outcome.AuctionID] = &pb.Outcome{
+		Status:     outcome.Status,
+		WinnerID:   outcome.WinnerID,
+		CurrentBid: outcome.CurrentBid,
+		AuctionID:  outcome.AuctionID,
+	}
+	auctionMutex.Unlock()
 	return &pb.Empty{}, nil
 }
 
